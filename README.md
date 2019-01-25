@@ -10,14 +10,14 @@
 
 This package provides an implementation of following set of OAuth2 standards:
 
-1. (The OAuth 2.0 Authorization Framework)[https://tools.ietf.org/html/rfc6749]
-2. (Proof Key for Code Exchange (PKCE) by OAuth Public Clients)[https://tools.ietf.org/html/rfc7636]
-3. (OAuth 2.0 Token Revocation)[https://tools.ietf.org/html/rfc7009]
-4. (OAuth 2.0 Token Introspection)[https://tools.ietf.org/html/rfc7662]
+1. [The OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749)
+2. [Proof Key for Code Exchange (PKCE) by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
+3. [OAuth 2.0 Token Revocation](https://tools.ietf.org/html/rfc7009)
+4. [OAuth 2.0 Token Introspection](https://tools.ietf.org/html/rfc7662)
 
 The package will also provide some example command-line tools for accessing common services.
 
-Racket already provides two packages with embedded OAuth implementations, 1) *(webapi)[https://pkgs.racket-lang.org/package/webapi]- Implementations of a few web APIs, including OAuth2, PicasaWeb, and Blogger* and 2) *(google)[https://pkgs.racket-lang.org/package/google] for Racket) - Google APIs (Drive, Plus, ...*. The difference between these and simple-oauth2 is an intent to be an extensible framework that as well as providing clear implementations of the specific requests and the grant flows, also provides a credential store for client and token persistence.
+Racket already provides two packages with embedded OAuth implementations, 1) *[webapi[(https://pkgs.racket-lang.org/package/webapi)- Implementations of a few web APIs, including OAuth2, PicasaWeb, and Blogger* and 2) *[google](https://pkgs.racket-lang.org/package/google) - Google APIs (Drive, Plus, ...*. The difference between these and simple-oauth2 is an intent to be an extensible framework that as well as providing clear implementations of the specific requests and the grant flows, also provides a credential store for client and token persistence.
 
 
 ## Modules
@@ -32,15 +32,18 @@ Racket already provides two packages with embedded OAuth implementations, 1) *(w
 
 ```scheme
 (require oauth2 
-		 oauth2/client
-		 oauth2/storage/clients)
+         oauth2/client
+         oauth2/storage/clients)
 
 (run-redirect-server)
+
 (define response-channel
   (request-authorization-code
     (get-client "Fitbit API")
     (list "sleep" "weight")))
+
 (displayln (format "returned auth code: ~a" (channel-get response-channel)))
+
 (shutdown-redirect-server)
 ```
 
