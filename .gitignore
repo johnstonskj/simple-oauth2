@@ -1,7 +1,6 @@
-*.ss~
-*.ss#*
-.#*.ss
-
-*.scm~
-*.scm#*
-.#*.scm
+*.rkt~
+*.rkt#*
+.#*.rkt
+compiled/
+simple-oauth2/doc/
+/coverage/
