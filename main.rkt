@@ -19,12 +19,14 @@
 
 ;; ---------- Implementation
 
+; Note, we use #:prefab to allow these to be serialized using read/write.
+
 (define-struct client
   (service-name
    authorization-uri
    token-uri
    id
-   secret))
+   secret) #:prefab)
 
 (define (create-client service-name id secret authorization-uri token-uri)
   (make-client service-name
@@ -39,4 +41,4 @@
    refresh-token
    audience
    scope
-   expires))
+   expires) #:prefab)

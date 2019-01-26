@@ -15,7 +15,7 @@
 ;
 ; OAuth 2.0 Token Introspection <https://tools.ietf.org/html/rfc7662>
 
-(provide 
+(provide
   create-random-state
   create-pkce-challenge
   request-authorization-code
@@ -72,11 +72,11 @@
   ;;   unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
   ;;   ALPHA = %x41-5A / %x61-7A
   ;;   DIGIT = %x30-39
-  (define verifier 
+  (define verifier
     (cond
       [(false? a-verifier)
-        (string-replace 
-          (string-replace 
+        (string-replace
+          (string-replace
             (string-replace (base64-encode (crypto-random-bytes 48) #"") "+" "-" #:all #t)
             "/" "_" #:all #t)
           "=" "" #:all #t)]
@@ -96,17 +96,17 @@
                               (cons 'redirect_uri (get-redirect-uri))
                               (cons 'scope (string-join scopes " "))
                               (cons 'state use-state))
-                        (if (false? audience) 
-                            (list) 
+                        (if (false? audience)
+                            (list)
                             (list (cons 'audience audience)))
-                        (if (false? challenge) 
-                            (list) 
+                        (if (false? challenge)
+                            (list)
                             (list (cons 'code_challenge (pkce-code challenge))
                                   (cons 'code_challenge_method (pkce-method challenge))))))
   (define query-string (alist->form-urlencoded query))
-  (define full-url 
-    (url->string 
-      (combine-url/relative 
+  (define full-url
+    (url->string
+      (combine-url/relative
         (client-authorization-uri client)
         (string-append "?" query-string))))
   (parameterize ([current-error-port (open-output-string "stderr")])
@@ -117,7 +117,7 @@
                          full-url))
   (log-oauth2-debug "starting browser: ~a" cmd)
     (define success? (system cmd))
-    (cond 
+    (cond
       [success?
         ; return the response channel
         (record-auth-request use-state)]
@@ -136,8 +136,8 @@
                   (cons 'code authorization-code)
                   (cons 'redirect_uri redirect-server-uri)
                   (cons 'client-id (client-id client)))
-            (if (false? challenge) 
-                (list) 
+            (if (false? challenge)
+                (list)
                 (list (cons 'code_verifier (pkce-verifier challenge)))))))
 
 (define (fetch-token/implicit client scopes #:state [state #f] #:audience [audience #f])
@@ -179,7 +179,7 @@
   (fetch-token-common
     client
     (append (list (cons 'token_type revoke-type)
-                  (cons 'token 
+                  (cons 'token
                     (cond
                       [(equal? revoke-type 'access-token)
                        (token-access-token token)]
@@ -187,16 +187,16 @@
                        (token-refresh-token token)]
                       [else (error "unknown token type: " revoke-type)]))))))
 
-(define (introspect-token client token token-type])
+(define (introspect-token client token token-type)
   ;; See <https://tools.ietf.org/html/rfc7662> section 2.1
   ;; Note:
-  ;; The Authorization header must be set to Bearer followed by a space, 
+  ;; The Authorization header must be set to Bearer followed by a space,
   ;; and then a valid access token used for making the Introspect request.
   (log-oauth2-info "introspect-token, service ~a" (client-service-name client))
   (fetch-token-common
     client
     (append (list (cons 'token_type_hint token-type)
-                  (cons 'token 
+                  (cons 'token
                     (cond
                       [(equal? token-type 'access-token)
                        (token-access-token token)]
@@ -205,14 +205,14 @@
                       [else (error "unknown token type: " token-type)]))))))
 
 (define (make-request-auth-header token)
-  (string->bytes/utf-8 (format "Authorization: ~a" (token-type token) (token-access-token token))))
+  (string->bytes/utf-8 (format "Authorization: ~a ~a" (token-type token) (token-access-token token))))
 
 ;; ---------- Internal Implementation
 
 (define (fetch-token-common client data-list)
   (define header (format "Authorization: Basic ~a" (encode-client client)))
-  (define response 
-    (do-post/form-encoded-list/json 
+  (define response
+    (do-post/form-encoded-list/json
       (client-token-uri client)
       (list header)
       data-list))
@@ -224,7 +224,7 @@
       (response)]))
 
 (define (do-post/form-encoded-list/json uri headers data-list)
-  (define response 
+  (define response
     (do-post
       uri
       headers
@@ -240,7 +240,7 @@
     "application/x-www-form-urlencoded"))
 
 (define (do-post uri headers data data-type)
-  (define-values 
+  (define-values
     (status headers in-port)
     (http-sendrecv
       (url-host uri)
@@ -253,7 +253,7 @@
   (parse-response status headers in-port))
 
 (define (string-split-first str sep)
-  (define index 
+  (define index
     (for/or ([char (string->list str)] [i (range (string-length str))])
       (if (equal? char sep) i #f)))
   (if (false? index)
@@ -262,7 +262,7 @@
 
 (define (parse-response status headers in-port)
   (define-values (code msg) (string-split-first (bytes->string/utf-8 status) #\space))
-  (list 
+  (list
     (string->number code)
     msg
     (for/list ([header headers])

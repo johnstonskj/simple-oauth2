@@ -13,9 +13,9 @@
 
 ;; ---------- Requirements
 
-(require oauth2/client-api
-         oauth/storage/clients
-         oauth/storage/profiles)
+(require oauth2/client
+         oauth2/storage/clients
+         oauth2/storage/profiles)
 
 ;; ---------- Implementation
 

@@ -40,6 +40,7 @@
 
 (define (get-auth-code name app-name)
   (log-oauth2-debug "get-auth-code for ~a, ~a" name app-name)
+  (displayln (format "get-auth-code for ~a, ~a" name app-name))
   (if (hash-has-key? profiles-cache name)
       ; decrypt
       (decrypt-secret (hash-ref (hash-ref profiles-cache name) app-name #f))
@@ -56,7 +57,7 @@
 (define loaded (load-profiles))
 (log-oauth2-info "loading profiles: ~a" loaded)
 
-;(module+ test
+(module+ test
   (require rackunit)
   ;; only use for internal tests, use check- functions
   (define starting-length (hash-count profiles-cache))
@@ -66,4 +67,4 @@
   (check-equal? (get-auth-code "simonjo" "fitbit") #"9834rkjw34n3934-3fnfo")
   (check-false (get-applications "simonjoX"))
   (check-false (get-auth-code "simonjoX" "fitbit"))
-  (check-false (get-auth-code "simonjo" "fitbitX"));)
+  (check-false (get-auth-code "simonjo" "fitbitX")))
