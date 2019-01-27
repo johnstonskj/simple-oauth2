@@ -17,9 +17,9 @@ This package provides an implementation of a full client for OAuth 2.0 protected
 
 In the same way as RFC6749, this implementation *"defines the use of bearer tokens over HTTP/1.1
    [RFC2616](https://tools.ietf.org/html/2616) using Transport Layer Security (TLS) [RFC5246](https://tools.ietf.org/html/5246) to access
-   protected resources."*. The package does however also provide example command-line tools for accessing common services.
+   protected resources."* The package does however also provide example command-line tools for accessing common services.
 
-Racket already provides two packages with embedded OAuth implementations, 1) *[webapi[(https://pkgs.racket-lang.org/package/webapi)- Implementations of a few web APIs, including OAuth2, PicasaWeb, and Blogger* and 2) *[google](https://pkgs.racket-lang.org/package/google) - Google APIs (Drive, Plus, ...*. The difference between these and simple-oauth2 is an intent to be an extensible framework that as well as providing clear implementations of the specific requests and the grant flows, also provides a credential store for client and token persistence.
+Racket already provides two packages with embedded OAuth implementations, 1) *[webapi](https://pkgs.racket-lang.org/package/webapi)- Implementations of a few web APIs, including OAuth2, PicasaWeb, and Blogger* and 2) *[google](https://pkgs.racket-lang.org/package/google) - Google APIs (Drive, Plus, ...*. The difference between these and simple-oauth2 is an intent to be an extensible framework that as well as providing clear implementations of the specific requests and the grant flows, also provides a credential store for client and token persistence.
 
 
 ## Modules
@@ -37,8 +37,6 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
          oauth2/client
          oauth2/storage/clients)
 
-(run-redirect-server)
-
 (define response-channel
   (request-authorization-code
     (get-client "Fitbit API")
@@ -46,7 +44,7 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 
 (displayln (format "returned auth code: ~a" (channel-get response-channel)))
 
-(shutdown-redirect-server)
+(authorization-complete)
 ```
 
 ## Tools
