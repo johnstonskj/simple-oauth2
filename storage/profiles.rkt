@@ -44,7 +44,7 @@
 (define (get-auth-code profile-name app-name)
   (log-oauth2-debug "get-auth-code for ~a, ~a" profile-name app-name)
   (define key (cons profile-name app-name))
-  (if (hash-has-key? key)
+  (if (hash-has-key? profiles-cache key)
       ; decrypt
       (decrypt-secret (hash-ref profiles-cache key #f))
       #f))

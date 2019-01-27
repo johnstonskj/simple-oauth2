@@ -21,6 +21,11 @@
 
 ;; ---------- Implementation
 
+(define FITBIT "fitbit")
+(define FITBIT-SERVICE-NAME "Fitbit API")
+(define FITBIT-AUTH-URI "https://www.fitbit.com/oauth2/authorize")
+(define FITBIT-TOKEN-URI "https://api.fitbit.com/oauth2/token")
+
 (define c-client-id (make-parameter #f))
 (define c-client-secret (make-parameter #f))
 (define c-auth-code (make-parameter #f))
@@ -38,6 +43,9 @@
            (false? (client-id maybe-client)))
        (displayln "No client credentials stored, please authenticate.")
        (λ () (perform-authentication maybe-client))]
+      [(false? (get-auth-code (c-profile) FITBIT-SERVICE-NAME))
+        (displayln "No authentication code stored, please authenticate.")
+        (λ () (perform-authentication maybe-client))]
       [else
        perform-api-command]))
 
@@ -46,13 +54,6 @@
     thunk
     #:logger oauth2-logger
     (logging-level)))
-
-;; ---------- Internal types
-
-(define FITBIT "fitbit")
-(define FITBIT-SERVICE-NAME "Fitbit API")
-(define FITBIT-AUTH-URI "https://www.fitbit.com/oauth2/authorize")
-(define FITBIT-TOKEN-URI "https://api.fitbit.com/oauth2/token")
 
 ;; ---------- Internal procedures
 
@@ -70,10 +71,6 @@
              (logging-level 'debug)]
       ;; ---------- Authentication flow
       #:once-each
-      [("-p" "--profile")
-             profile
-             "Client Profile to save"
-             (c-profile profile)]
       [("-i" "--client-id") id "Registered client ID"
                             (c-client-id id)]
       [("-s" "--client-secret") secret "Registered client secret"
@@ -85,7 +82,7 @@
     [(or (false? (c-profile))
          (false? (c-client-id))
          (false? (c-client-secret)))
-     (displayln "fitbit: expects -p -i -s on the command line, try -h for help")]
+     (displayln "fitbit: expects -i -s on the command line, try -h for help")]
     [else
       (define real-client
         (cond
@@ -121,9 +118,5 @@
                          (logging-level 'debug)]
      ;; ---------- API access commands
      #:once-each
-     [("-p" "--profile") profile "Client Profile"
-                         (c-profile profile)]
-     [("-c" "--auth-code") id "Authentication code"
-                         (client-id id)]
      [("-o" "--output-file") path "Output file"
                          (c-output-file path)]))
