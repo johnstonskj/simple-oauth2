@@ -19,6 +19,7 @@
   create-random-state
   create-pkce-challenge
   request-authorization-code
+  authorization-complete
   fetch-token/from-code
   fetch-token/implicit
   fetch-token/with-password
@@ -28,6 +29,7 @@
 ;; ---------- Requirements
 
 (require racket/bool
+         racket/lazy-require
          racket/list
          racket/match
          racket/port
@@ -42,9 +44,14 @@
          net/url
          net/url-string
          oauth2
-         oauth2/private/redirect-server
          oauth2/private/logging
          oauth2/private/privacy)
+
+(lazy-require
+  [oauth2/private/redirect-server
+    (get-redirect-uri
+     record-auth-request
+     shutdown-redirect-server)])
 
 ;; ---------- Internal types
 
@@ -91,18 +98,18 @@
   ;; See <https://tools.ietf.org/html/rfc7636> section 4.3
   (log-oauth2-info "request-authorization-code from ~a" (client-service-name client))
   (define use-state (if (false? state) (create-random-state) state))
-  (define query (append (list (cons 'response_type "code")
-                              (cons 'client_id (client-id client))
-                              (cons 'redirect_uri (get-redirect-uri))
-                              (cons 'scope (string-join scopes " "))
-                              (cons 'state use-state))
+  (define query (append `((response_type . "code")
+                          (client_id . ,(client-id client))
+                          (redirect_uri . ,(get-redirect-uri))
+                          (scope . ,(string-join scopes " "))
+                          (state . ,use-state))
                         (if (false? audience)
-                            (list)
-                            (list (cons 'audience audience)))
+                            '()
+                            `((audience . ,audience)))
                         (if (false? challenge)
-                            (list)
-                            (list (cons 'code_challenge (pkce-code challenge))
-                                  (cons 'code_challenge_method (pkce-method challenge))))))
+                            '()
+                            `((code_challenge . ,(pkce-code challenge))
+                              (code_challenge_method . ,(pkce-method challenge))))))
   (define query-string (alist->form-urlencoded query))
   (define full-url
     (url->string
@@ -126,6 +133,9 @@
         (log-oauth2-error "system call failed. error: ~a" error-string)
         (error "system call failed. error: " error-string)])))
 
+(define (authorization-complete)
+  (shutdown-redirect-server))
+
 (define (fetch-token/from-code client authorization-code #:challenge [challenge #f])
   ;; See <https://tools.ietf.org/html/rfc6749> section 4.1.3
   ;; See <https://tools.ietf.org/html/rfc7636> section 4.5
@@ -134,7 +144,7 @@
     client
     (append (list (cons 'grant-type "authorization_code")
                   (cons 'code authorization-code)
-                  (cons 'redirect_uri redirect-server-uri)
+                  (cons 'redirect_uri (get-redirect-uri))
                   (cons 'client-id (client-id client)))
             (if (false? challenge)
                 (list)

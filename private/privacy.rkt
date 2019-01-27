@@ -40,8 +40,6 @@
   (encrypt crypto-cipher crypto-key crypto-iv s #:aad crypto-aad))
 
 (define (decrypt-secret cs)
-  (displayln "***")
-  (displayln cs)
   (decrypt crypto-cipher crypto-key crypto-iv cs #:aad crypto-aad))
 
 (define (encode-client client)

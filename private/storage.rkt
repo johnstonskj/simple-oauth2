@@ -46,12 +46,12 @@
            (define (saver)
              (define save-path (file-path))
              (when (file-exists? save-path)
-               (rename-file-or-directory save-path (path-add-extension save-path ".last")))
+               (rename-file-or-directory save-path (path-add-extension save-path ".last") #t))
              (call-with-output-file save-path
                (lambda (out)
                  (write cache out)))
              #t)
-           (define (loader) 
+           (define (loader)
              (define load-path (file-path))
                (when (file-exists? load-path)
                (call-with-input-file load-path
@@ -59,12 +59,12 @@
                    (define value (read in))
                    (cond
                      [(hash? value)
-                      (set! cache value)]
+                      (set! cache (make-hash (hash->list value)))]
                      [else (error "value read was not a hash: " value)]))))
              #t)
            (define (file-path)
-             (define dir-path 
-               (build-path 
+             (define dir-path
+               (build-path
                  (cond
                   [(string? root)
                    (string->path root)]

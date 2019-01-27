@@ -55,7 +55,7 @@
       [else
        (struct-copy client
                     a-client
-                    [secret (encrypt-secret (client-secret client))])]))
+                    [secret (encrypt-secret (client-secret a-client))])]))
   (hash-set! clients-cache app-name new-client))
 
 ;; ---------- Startup procedures

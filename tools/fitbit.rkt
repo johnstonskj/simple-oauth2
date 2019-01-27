@@ -21,17 +21,16 @@
 
 ;; ---------- Implementation
 
-(define c-client-id (make-parameter ""))
-(define c-client-secret (make-parameter ""))
-(define c-scopes (make-parameter '()))
-(define c-auth-code (make-parameter ""))
+(define c-client-id (make-parameter #f))
+(define c-client-secret (make-parameter #f))
+(define c-auth-code (make-parameter #f))
 (define c-profile (make-parameter (create-default-profile)))
-(define c-output-file (make-parameter "."))
+(define c-output-file (make-parameter #f))
 (define logging-level (make-parameter 'warning))
 
 (module+ main
 
-  (define maybe-client (get-client "Fitbit API"))
+  (define maybe-client (get-client FITBIT-SERVICE-NAME))
 
   (define thunk
     (cond
@@ -58,43 +57,58 @@
 ;; ---------- Internal procedures
 
 (define (perform-authentication maybe-client)
-  (command-line
-    #:program FITBIT
-    ;; ---------- Common commands
-    #:once-any
-    [("-v" "--verbose")
-           "Compile with verbose messages"
-           (logging-level 'info)]
-    [("-V" "--very-verbose")
-           "Compile with very verbose messages"
-           (logging-level 'debug)]
-    ;; ---------- Authentication flow
-    #:once-each
-    [("-p" "--profile")
-           profile
-           "Client Profile to save"
-           (c-profile profile)]
-    [("-i" "--client-id") id "Registered client ID"
-                          (c-client-id id)]
-    [("-s" "--client-secret") secret "Registered client secret"
-                              (c-client-secret secret)]
-    #:multi
-    [("-S" "--scopes") scope "Authorize scope"
-                       (c-scopes (cons scope (c-scopes)))])
-  (set-client! FITBIT-SERVICE-NAME
-   (cond
-     [(false? maybe-client)
-      (make-client
-        FITBIT-SERVICE-NAME
-        (c-client-id)
-        (c-client-secret)
-        FITBIT-AUTH-URI
-        FITBIT-TOKEN-URI)]
-     [(false? (client-id maybe-client))
-      (struct-copy client maybe-client
-        [id (c-client-id)]
-        [secret (c-client-secret)])]))
-  (save-clients))
+  (define c-scopes
+    (command-line
+      #:program FITBIT
+      ;; ---------- Common commands
+      #:once-any
+      [("-v" "--verbose")
+             "Compile with verbose messages"
+             (logging-level 'info)]
+      [("-V" "--very-verbose")
+             "Compile with very verbose messages"
+             (logging-level 'debug)]
+      ;; ---------- Authentication flow
+      #:once-each
+      [("-p" "--profile")
+             profile
+             "Client Profile to save"
+             (c-profile profile)]
+      [("-i" "--client-id") id "Registered client ID"
+                            (c-client-id id)]
+      [("-s" "--client-secret") secret "Registered client secret"
+                                (c-client-secret secret)]
+      #:args (scope . scopes)
+      (cons scope scopes)))
+
+  (cond
+    [(or (false? (c-profile))
+         (false? (c-client-id))
+         (false? (c-client-secret)))
+     (displayln "fitbit: expects -p -i -s on the command line, try -h for help")]
+    [else
+      (define real-client
+        (cond
+          [(false? maybe-client)
+           (make-client
+             FITBIT-SERVICE-NAME
+             (c-client-id)
+             (c-client-secret)
+             FITBIT-AUTH-URI
+             FITBIT-TOKEN-URI)]
+          [(false? (client-id maybe-client))
+           (struct-copy client maybe-client
+             [id (c-client-id)]
+             [secret (c-client-secret)])]))
+      (set-client! FITBIT-SERVICE-NAME real-client)
+      (save-clients)
+
+      (define response-channel
+        (request-authorization-code real-client c-scopes))
+
+      (define auth-code (channel-get response-channel))
+
+      (displayln (format "returned authenication code: ~a" auth-code))]))
 
 (define (perform-api-command)
   (command-line

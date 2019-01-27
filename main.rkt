@@ -25,13 +25,22 @@
   (service-name
    authorization-uri
    token-uri
+   revoke-uri
+   introspect-uri
    id
    secret) #:prefab)
 
-(define (create-client service-name id secret authorization-uri token-uri)
+(define (create-client service-name id secret authorization-uri token-uri
+                       #:revoke [revoke-uri #f] #:introspect [introspect-uri #f])
   (make-client service-name
                (string->url authorization-uri)
                (string->url token-uri)
+               (if (string? revoke-uri)
+                   (string->url revoke-uri)
+                   #f)
+               (if (string? introspect-uri)
+                   (string->url introspect-uri)
+                   #f)
                id
                secret))
 

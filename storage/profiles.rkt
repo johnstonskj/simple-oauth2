@@ -19,7 +19,8 @@
 
 ;; ---------- Requirements
 
-(require oauth2/storage/config
+(require racket/list
+         oauth2/storage/config
          oauth2/private/logging
          oauth2/private/privacy
          oauth2/private/storage)
@@ -34,23 +35,24 @@
 ; (hash/c profile-name? (hash/c application-name? auth-code?))
 (define-cached-file profiles 'home-dir ".oauth2.rkt")
 
-(define (get-applications name)
-  (log-oauth2-debug "get-applications for ~a" name)
-  (hash-ref profiles-cache name #f))
+(define (get-applications profile-name)
+  (log-oauth2-debug "get-applications for ~a" profile-name)
+  (filter
+    (lambda (key) (equal? (first key) profile-name))
+    (hash-keys profiles-cache)))
 
-(define (get-auth-code name app-name)
-  (log-oauth2-debug "get-auth-code for ~a, ~a" name app-name)
-  (displayln (format "get-auth-code for ~a, ~a" name app-name))
-  (if (hash-has-key? profiles-cache name)
+(define (get-auth-code profile-name app-name)
+  (log-oauth2-debug "get-auth-code for ~a, ~a" profile-name app-name)
+  (define key (cons profile-name app-name))
+  (if (hash-has-key? key)
       ; decrypt
-      (decrypt-secret (hash-ref (hash-ref profiles-cache name) app-name #f))
+      (decrypt-secret (hash-ref profiles-cache key #f))
       #f))
 
-(define (set-auth-code! name app-name auth-code)
-  (log-oauth2-debug "set-auth-code! for ~a, ~a = ~a" name app-name auth-code)
-  (unless (hash-has-key? profiles-cache name)
-    (hash-set! profiles-cache name (make-hash)))
-  (hash-set! (hash-ref profiles-cache name) app-name (encrypt-secret auth-code)))
+(define (set-auth-code! profile-name app-name auth-code)
+  (log-oauth2-debug "set-auth-code! for ~a, ~a" profile-name app-name)
+  (define key (cons profile-name app-name))
+  (hash-set! profiles-cache key (encrypt-secret auth-code)))
 
 ;; ---------- Startup procedures
 
