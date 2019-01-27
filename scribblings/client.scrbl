@@ -3,10 +3,11 @@
 @(require racket/sandbox
           scribble/core
           scribble/eval
-          simple-oauth2
           (for-label racket/base
                      racket/contract
-                     simple-oauth2))
+                     oauth2
+                     oauth2/client
+                     oauth2/client/flow))
 
 @;{============================================================================}
 @(define example-eval (make-base-eval
@@ -14,25 +15,20 @@
                                 oauth2)))
 
 @;{============================================================================}
-@title[]{Module oauth2.}
-@defmodule[oauth2]
+@title[]{OAuth 2.0 Client}
 
 Simple OAuth2 client and server implementation
 
 @examples[ #:eval example-eval
-(require oauth2)
+(require oauth2 oauth2/client)
 ; add more here.
 ]
 
 @;{============================================================================}
-@;Add your API documentation here...
-
-
-@;{============================================================================}
-@title[]{Module oauth2/client.}
+@section[]{Module oauth2/client.}
 @defmodule[oauth2/client]
 
-@;{============================================================================}
-@title[]{Module oauth2/client-flow.}
-@defmodule[oauth2/client-flow]
 
+@;{============================================================================}
+@section[]{Module oauth2/client/flow.}
+@defmodule[oauth2/client/flow]

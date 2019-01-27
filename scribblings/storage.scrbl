@@ -3,10 +3,11 @@
 @(require racket/sandbox
           scribble/core
           scribble/eval
-          simple-oauth2
           (for-label racket/base
                      racket/contract
-                     simple-oauth2))
+                     oauth2/storage/config
+                     oauth2/storage/clients
+                     oauth2/storage/profiles))
 
 @;{============================================================================}
 @(define example-eval (make-base-eval
@@ -14,23 +15,21 @@
                                 oauth2)))
 
 @;{============================================================================}
-@title[]{Module oauth2/storage/config.}
-@defmodule[oauth2/storage/config]
+@title[]{Configuration and Client Persistence}
 
 @examples[ #:eval example-eval
-(require oauth2)
+(require oauth2/storage/config)
 ; add more here.
 ]
 
 @;{============================================================================}
-@;Add your API documentation here...
-
+@section[]{Module oauth2/storage/config.}
+@defmodule[oauth2/storage/config]
 
 @;{============================================================================}
-@title[]{Module oauth2/storage/clients.}
+@section[]{Module oauth2/storage/clients.}
 @defmodule[oauth2/storage/clients]
 
 @;{============================================================================}
-@title[]{Module oauth2/storage/profiles.}
+@section[]{Module oauth2/storage/profiles.}
 @defmodule[oauth2/storage/profiles]
-

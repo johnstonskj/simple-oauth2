@@ -22,3 +22,10 @@
   "racket-doc"
   "sandbox-lib"
   "cover-coveralls"))
+
+(define scribblings '(("scribblings/simple-oauth2.scrbl" (multi-page))))
+
+(define test-omit-paths '("scribblings" "private"))
+
+(define racket-launcher-names '("fitbit"))
+(define racket-launcher-libraries '("tools/fitbit.rkt"))
