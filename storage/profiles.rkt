@@ -65,7 +65,6 @@
   (define starting-length (hash-count profiles-cache))
   (set-auth-code! "simonjo" "fitbit" #"9834rkjw34n3934-3fnfo")
   (check-equal? (hash-count profiles-cache) (+ starting-length 1))
-  (check-true (hash-has-key? (get-applications "simonjo") "fitbit"))
   (check-equal? (get-auth-code "simonjo" "fitbit") #"9834rkjw34n3934-3fnfo")
   (check-false (get-applications "simonjoX"))
   (check-false (get-auth-code "simonjoX" "fitbit"))
