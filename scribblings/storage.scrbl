@@ -7,7 +7,7 @@
                      racket/contract
                      oauth2/storage/config
                      oauth2/storage/clients
-                     oauth2/storage/profiles))
+                     oauth2/storage/tokens))
 
 @;{============================================================================}
 @(define example-eval (make-base-eval
@@ -31,5 +31,5 @@
 @defmodule[oauth2/storage/clients]
 
 @;{============================================================================}
-@section[]{Module oauth2/storage/profiles.}
-@defmodule[oauth2/storage/profiles]
+@section[]{Module oauth2/storage/tokens.}
+@defmodule[oauth2/storage/tokens]

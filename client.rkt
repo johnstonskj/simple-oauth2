@@ -163,7 +163,7 @@
 
 (define (fetch-token/with-client client)
   ;; See <https://tools.ietf.org/html/rfc6749> section 4.4.2
-  (log-oauth2-info "fetch-token/native, service ~a" (client-service-name client))
+  (log-oauth2-info "fetch-token/with-client, service ~a" (client-service-name client))
   (fetch-token-common
     client
     (append (list (cons 'grant-type "password")

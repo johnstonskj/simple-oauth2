@@ -13,9 +13,9 @@
          racket/cmdline
          racket/logging
          oauth2
-         oauth2/client
+         oauth2/client/flow
          oauth2/storage/clients
-         oauth2/storage/profiles
+         oauth2/storage/tokens
          oauth2/private/redirect-server
          oauth2/private/logging)
 
@@ -29,7 +29,7 @@
 (define c-client-id (make-parameter #f))
 (define c-client-secret (make-parameter #f))
 (define c-auth-code (make-parameter #f))
-(define c-profile (make-parameter (create-default-profile)))
+(define c-profile (make-parameter (create-default-user)))
 (define c-output-file (make-parameter #f))
 (define logging-level (make-parameter 'warning))
 
@@ -43,7 +43,7 @@
            (false? (client-id maybe-client)))
        (displayln "No client credentials stored, please authenticate.")
        (λ () (perform-authentication maybe-client))]
-      [(false? (get-auth-code (c-profile) FITBIT-SERVICE-NAME))
+      [(false? (get-token (c-profile) FITBIT-SERVICE-NAME))
         (displayln "No authentication code stored, please authenticate.")
         (λ () (perform-authentication maybe-client))]
       [else
@@ -100,12 +100,13 @@
       (set-client! FITBIT-SERVICE-NAME real-client)
       (save-clients)
 
-      (define response-channel
-        (request-authorization-code real-client c-scopes))
+      (define token
+        (initiate-code-flow
+          real-client
+          c-scopes
+          #:profile c-profile))
 
-      (define auth-code (channel-get response-channel))
-
-      (displayln (format "returned authenication code: ~a" auth-code))]))
+      (displayln (format "returned authenication token: ~a" token))]))
 
 (define (perform-api-command)
   (command-line
