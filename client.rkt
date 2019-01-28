@@ -39,6 +39,7 @@
          file/sha1
          json
          net/base64
+         net/jwt/base64
          net/http-client
          net/uri-codec
          net/url
@@ -82,14 +83,10 @@
   (define verifier
     (cond
       [(false? a-verifier)
-        (string-replace
-          (string-replace
-            (string-replace (base64-encode (crypto-random-bytes 48) #"") "+" "-" #:all #t)
-            "/" "_" #:all #t)
-          "=" "" #:all #t)]
-      [(string? a-verifier) a-verifier]
-      [else (format "~a" a-verifier)]))
-  (define challenge (sha256-bytes verifier))
+       (crypto-random-bytes 48)]
+      [(bytes? a-verifier) a-verifier]
+      [else (error "code verifier must be bytes? or #f")]))
+  (define challenge (base64-url-encode (sha256-bytes verifier)))
   ; only support 'S256' option, no need for 'plain'
   (make-pkce verifier challenge "S256"))
 

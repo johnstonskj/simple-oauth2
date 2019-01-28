@@ -15,6 +15,7 @@
   "base"
   "web-server-lib"
   "crypto-lib"
+  "net-jwt"
   "rackunit-lib"
   "racket-index"))
 (define build-deps '(

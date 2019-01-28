@@ -61,7 +61,6 @@ TBD
 ## Work in Progress
 
 * Support for [JSON Web Tokens](https://tools.ietf.org/html/rfc7519).
-* Support for parsing [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519) values; this implies support for [JSON Web Signature (JWS)](https://tools.ietf.org/html/rfc7515), [JSON Web Encryption (JWE)](https://tools.ietf.org/html/rfc7516), and [JSON Web Algorithms (JWA)](https://tools.ietf.org/html/rfc7518).
 * Authorization Server framework.
 * Resource Server framework.
 
