@@ -21,15 +21,24 @@
 
 ;; ---------- Implementation
 
-(define FITBIT "fitbit")
+(define COMMAND "fitbit")
+
 (define FITBIT-SERVICE-NAME "Fitbit API")
-(define FITBIT-AUTH-URI "https://www.fitbit.com/oauth2/authorize")
-(define FITBIT-TOKEN-URI "https://api.fitbit.com/oauth2/token")
+
+(define fitbit-client
+  (make-client
+    FITBIT-SERVICE-NAME
+    #f
+    #f
+    "https://www.fitbit.com/oauth2/authorize"
+    "https://api.fitbit.com/oauth2/token"
+    #:revoke "https://api.fitbit.com/oauth2/revoke"
+    #:introspect "https://api.fitbit.com/1.1/oauth2/introspect"))
 
 (define c-client-id (make-parameter #f))
 (define c-client-secret (make-parameter #f))
 (define c-auth-code (make-parameter #f))
-(define c-profile (make-parameter (create-default-user)))
+(define c-user (make-parameter (create-default-user)))
 (define c-output-file (make-parameter #f))
 (define logging-level (make-parameter 'warning))
 
@@ -42,12 +51,12 @@
       [(or (false? maybe-client)
            (false? (client-id maybe-client)))
        (displayln "No client credentials stored, please authenticate.")
-       (λ () (perform-authentication maybe-client))]
-      [(false? (get-token (c-profile) FITBIT-SERVICE-NAME))
+       (perform-authentication maybe-client)]
+      [(false? (get-token (c-user) FITBIT-SERVICE-NAME))
         (displayln "No authentication code stored, please authenticate.")
-        (λ () (perform-authentication maybe-client))]
+        (perform-authentication maybe-client)]
       [else
-       perform-api-command]))
+       (perform-api-command)]))
 
   (with-logging-to-port
       (current-output-port)
@@ -60,7 +69,7 @@
 (define (perform-authentication maybe-client)
   (define c-scopes
     (command-line
-      #:program FITBIT
+      #:program COMMAND
       ;; ---------- Common commands
       #:once-any
       [("-v" "--verbose")
@@ -78,39 +87,38 @@
       #:args (scope . scopes)
       (cons scope scopes)))
 
-  (cond
-    [(or (false? (c-profile))
-         (false? (c-client-id))
-         (false? (c-client-secret)))
-     (displayln "fitbit: expects -i -s on the command line, try -h for help")]
-    [else
-      (define real-client
-        (cond
-          [(false? maybe-client)
-           (make-client
-             FITBIT-SERVICE-NAME
-             (c-client-id)
-             (c-client-secret)
-             FITBIT-AUTH-URI
-             FITBIT-TOKEN-URI)]
-          [(false? (client-id maybe-client))
-           (struct-copy client maybe-client
-             [id (c-client-id)]
-             [secret (c-client-secret)])]))
-      (set-client! FITBIT-SERVICE-NAME real-client)
-      (save-clients)
+  (lambda ()
+    (cond
+      [(or (false? (c-user))
+          (false? (c-client-id))
+          (false? (c-client-secret)))
+      (displayln "fitbit: expects -i -s on the command line, try -h for help")]
+      [else
+        (define real-client
+          (cond
+            [(false? maybe-client)
+            (struct-copy client fitbit-client
+              [id (c-client-id)]
+              [secret (c-client-secret)])]
+            [(false? (client-id maybe-client))
+            (struct-copy client maybe-client
+              [id (c-client-id)]
+              [secret (c-client-secret)])]
+            [else maybe-client]))
+        (set-client! real-client)
+        (save-clients)
 
-      (define token
-        (initiate-code-flow
-          real-client
-          c-scopes
-          #:profile c-profile))
+        (define token
+          (initiate-code-flow
+            real-client
+            c-scopes
+            #:user-name c-user))
 
-      (displayln (format "returned authenication token: ~a" token))]))
+        (displayln (format "returned authenication token: ~a" token))])))
 
 (define (perform-api-command)
   (command-line
-     #:program FITBIT
+     #:program COMMAND
      ;; ---------- Common commands
      #:once-any
      [("-v" "--verbose") "Compile with verbose messages"

@@ -196,9 +196,11 @@
           (server-config-port redirect-server)
           (server-config-path redirect-server)))
 
-(define (run-redirect-server)
-  (log-oauth2-info "run-redirect-server")
+(define (run-redirect-coordinator)
+  (log-oauth2-info "run-redirect-coordinator")
   (thread
     (lambda ()
-      (log-oauth2-debug "run-redirect-server thread calling coordinator")
+      (log-oauth2-debug "run-redirect-coordinator thread calling coordinator")
       (coordinator))))
+
+(run-redirect-coordinator)

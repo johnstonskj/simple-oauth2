@@ -19,6 +19,7 @@
 
 (require racket/bool
          racket/file
+         net/url-structs
          oauth2
          oauth2/private/logging
          oauth2/private/privacy
@@ -44,8 +45,8 @@
                   a-client
                   [secret (decrypt-secret (client-secret a-client))])]))
 
-(define (set-client! app-name a-client)
-  (log-oauth2-debug "set-client! ~a ~a" app-name (client-id a-client))
+(define (set-client! a-client)
+  (log-oauth2-debug "set-client! ~a ~a" (client-service-name a-client) (client-id a-client))
   ; note, we always encrypt into the cache, and therefore into save.
   (define new-client
     (cond
@@ -56,7 +57,7 @@
        (struct-copy client
                     a-client
                     [secret (encrypt-secret (client-secret a-client))])]))
-  (hash-set! clients-cache app-name new-client))
+  (hash-set! clients-cache (client-service-name new-client) new-client))
 
 ;; ---------- Startup procedures
 

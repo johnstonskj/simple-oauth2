@@ -139,13 +139,13 @@
   (log-oauth2-info "fetch-token/from-code, service ~a, code ~a" (client-service-name client) authorization-code)
   (fetch-token-common
     client
-    (append (list (cons 'grant-type "authorization_code")
-                  (cons 'code authorization-code)
-                  (cons 'redirect_uri (get-redirect-uri))
-                  (cons 'client-id (client-id client)))
+    (append `((grant-type . "authorization_code")
+              (code . ,authorization-code)
+              (redirect_uri . ,(get-redirect-uri))
+              (client-id . ,(client-id client)))
             (if (false? challenge)
-                (list)
-                (list (cons 'code_verifier (pkce-verifier challenge)))))))
+                '()
+                `((code_verifier . ,(pkce-verifier challenge)))))))
 
 (define (fetch-token/implicit client scopes #:state [state #f] #:audience [audience #f])
   ;; See <https://tools.ietf.org/html/rfc6749> section 4.2.1
@@ -246,18 +246,26 @@
     (alist->form-urlencoded data-list)
     "application/x-www-form-urlencoded"))
 
-(define (do-post uri headers data data-type)
+(define (do-post uri request-headers data data-type)
+  (log-oauth2-debug "(http-sendrecv")
+  (log-oauth2-debug "  ~s" (url-host uri))
+  (log-oauth2-debug "  ~s" uri)
+  (log-oauth2-debug "  #:port ~s" (url-port uri))
+  (log-oauth2-debug "  #:ssl? ~s ; ~s" (equal? (url-scheme uri) "https") (url-scheme uri))
+  (log-oauth2-debug "  #:headers ~s" (cons (format "Content-Type: ~a" data-type) request-headers))
+  (log-oauth2-debug "  #:data ~s)" data)
   (define-values
-    (status headers in-port)
+    (status response-headers in-port)
     (http-sendrecv
       (url-host uri)
-      uri
-      #:port (url-port uri)
+      (url->string uri)
+;      #:port (false? (url-port uri)
       #:ssl? (equal? (url-scheme uri) "https")
       #:method "POST"
-      #:headers (cons (format "Content-Type: ~a" data-type) headers)
+      #:headers (cons (format "Content-Type: ~a" data-type) request-headers)
       #:data data))
-  (parse-response status headers in-port))
+  (log-oauth2-debug "(values ~s ~s #port)" status response-headers)
+  (parse-response status response-headers in-port))
 
 (define (string-split-first str sep)
   (define index

@@ -61,7 +61,7 @@
     (set-preference! 'cipher-iv (generate-cipher-iv cipher-impl))
     (set-preference! 'redirect-host-type 'localhost)
     (set-preference! 'redirect-host-port 8080)
-    (set-preference! 'redirect-path "/oauth2/authorized")
+    (set-preference! 'redirect-path "/oauth/authorization")
     (set-preference! 'redirect-ssl-certificate #f)
     (set-preference! 'redirect-ssl-key #f)
     (save-preferences)]
