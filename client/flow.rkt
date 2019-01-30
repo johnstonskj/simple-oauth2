@@ -27,25 +27,32 @@
 
   (define response-channel
     (request-authorization-code
-      client scopes
-      #:state state #:challenge challenge #:audience audience))
+      client 
+      scopes
+      #:state state 
+      #:challenge challenge 
+      #:audience audience))
 
   (define authorization-code
     (channel-get response-channel))
   (log-oauth2-debug "received auth-code ~a" authorization-code)
 
+  (when (exn:fail? authorization-code)
+    (raise authorization-code))
+
   (define token-response
     (fetch-token/from-code
-      client authorization-code
+      client 
+      authorization-code
       #:challenge challenge))
   (log-oauth2-debug "fetch-token/from-code returned ~a" token-response)
 
   (set-token!
     (if (false? user-name)
-        (create-default-user)
+        current-default-user
         user-name)
     (client-service-name client)
-    (token-access-token token-response))
+    token-response)
   (save-tokens)
 
   token-response)

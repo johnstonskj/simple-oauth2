@@ -37,10 +37,12 @@
 ; if the file is copied and loaded by a user other than the one that saved it
 ; the decryption process will fail.
 (define (encrypt-secret s)
+  ; encrypt will store bytes
   (encrypt crypto-cipher crypto-key crypto-iv s #:aad crypto-aad))
 
 (define (decrypt-secret cs)
-  (decrypt crypto-cipher crypto-key crypto-iv cs #:aad crypto-aad))
+  ; need to convert back to text
+  (bytes->string/latin-1 (decrypt crypto-cipher crypto-key crypto-iv cs #:aad crypto-aad)))
 
 (define (encode-client client)
   ;; See <https://tools.ietf.org/html/rfc2617> section 2

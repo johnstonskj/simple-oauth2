@@ -16,6 +16,7 @@
          racket/os
          web-server/servlet
          web-server/servlet-env
+         oauth2
          oauth2/storage/config
          oauth2/private/external-ip
          oauth2/private/logging)
@@ -137,9 +138,14 @@
               #"</p></body></html>"))]
     [(hash-has-key? params 'error)
       (log-oauth2-error "received ~a from auth server for state ~a"
-                        (hash-ref params 'error "")
+                        (hash-ref params 'error)
                         (hash-ref params 'state ""))
-      (channel-put request-channel (list 'error (hash-ref params 'error "")))
+      (channel-put request-channel
+                   (make-exn:fail:oauth2 (hash-ref params 'error)
+                                         (hash-ref params 'error_description "")
+                                         (hash-ref params 'error_uri)
+                                         (hash-ref params 'state)
+                                         (current-continuation-marks)))
       (response/full
         200
         #"OK-ish"
@@ -158,7 +164,12 @@
               #"</p></body></html>"))]
     [else
       (log-oauth2-error "received an unknown error from auth server: ~a" params)
-      (channel-put request-channel '(error))
+      (channel-put request-channel
+                   (make-exn:fail:http 500
+                                       "UNKNOWN ERROR"
+                                       params
+                                       ""
+                                       (current-continuation-marks)))
       (response/full
         500
         #"SERVER ERROR"
@@ -203,4 +214,4 @@
       (log-oauth2-debug "run-redirect-coordinator thread calling coordinator")
       (coordinator))))
 
-(run-redirect-coordinator)
+(void (run-redirect-coordinator))

@@ -10,7 +10,7 @@
 (require racket/contract)
 
 (provide
-  create-default-user
+  current-default-user
   get-applications
   get-token
   set-token!
@@ -30,8 +30,7 @@
 
 ;; ---------- Implementation
 
-(define (create-default-user)
-  (get-current-user-name))
+(define current-default-user (get-current-user-name))
 
 ; (hash/c token-name? (hash/c application-name? auth-code?))
 (define-cached-file tokens 'home-dir ".oauth2.rkt")
@@ -55,7 +54,10 @@
     [else #f]))
 
 (define (set-token! user-name service-name a-token)
-  (log-oauth2-debug "set-token! for ~a, ~a" user-name service-name)
+  (log-oauth2-debug "set-token! for ~a (~a), ~a" 
+                    user-name
+                    (string? user-name)
+                    service-name)
   (define key (cons user-name service-name))
   (hash-set! tokens-cache
              key

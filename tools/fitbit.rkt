@@ -12,6 +12,8 @@
 (require racket/bool
          racket/cmdline
          racket/logging
+         racket/string
+         json
          oauth2
          oauth2/client/flow
          oauth2/storage/clients
@@ -38,7 +40,7 @@
 (define c-client-id (make-parameter #f))
 (define c-client-secret (make-parameter #f))
 (define c-auth-code (make-parameter #f))
-(define c-user (make-parameter (create-default-user)))
+(define c-user (make-parameter current-default-user))
 (define c-output-file (make-parameter #f))
 (define logging-level (make-parameter 'warning))
 
@@ -90,8 +92,8 @@
   (lambda ()
     (cond
       [(or (false? (c-user))
-          (false? (c-client-id))
-          (false? (c-client-secret)))
+           (false? (c-client-id))
+           (false? (c-client-secret)))
       (displayln "fitbit: expects -i -s on the command line, try -h for help")]
       [else
         (define real-client
@@ -108,13 +110,30 @@
         (set-client! real-client)
         (save-clients)
 
-        (define token
-          (initiate-code-flow
-            real-client
-            c-scopes
-            #:user-name c-user))
+        (with-handlers
+          ([exn:fail:http?
+            (lambda (exn)
+              (displayln
+                (format "An HTTP error occurred: ~a (~a)" 
+                  (exn-message exn)
+                  (exn:fail:http-code exn))))]
+           [exn:fail:oauth2?
+            (lambda (exn)
+              (displayln exn)
+              (display "An OAuth error occurred: ")
+              (displayln (exn:fail:oauth2-error exn))
+              (display ">>> ")
+              (when (non-empty-string? (exn:fail:oauth2-error-description exn))
+                (displayln (exn:fail:oauth2-error-description exn)))
+              (when (non-empty-string? (exn:fail:oauth2-error-uri exn))
+                (displayln (exn:fail:oauth2-error-uri exn))))])
+          (define token
+            (initiate-code-flow
+              real-client
+              c-scopes
+              #:user-name (c-user)))
 
-        (displayln (format "returned authenication token: ~a" token))])))
+          (displayln (format "Fitbit returned authenication token: ~a" token)))])))
 
 (define (perform-api-command)
   (command-line
