@@ -20,9 +20,9 @@
 
 ;; ---------- Requirements
 
- (require racket/bool
-          racket/string
-          net/url)
+(require racket/bool
+         racket/string
+         net/url)
 
 ;; ---------- Implementation
 
@@ -36,16 +36,6 @@
    introspect-uri
    id
    secret) #:prefab)
-
-(define (validate-url url)
-  (cond
-    [(non-empty-string? url)
-     (define parsed (string->url url))
-     (and (and (string? (url-scheme parsed))
-               (string-prefix? (url-scheme parsed) "http"))
-          (non-empty-string? (url-host parsed))
-          (url-path-absolute? parsed))]
-    [else #f]))
 
 (define (create-client service-name id secret authorization-uri token-uri
                        #:revoke [revoke-uri #f] #:introspect [introspect-uri #f])
@@ -91,6 +81,20 @@
 
 (define (exn:fail:oauth2-error-description exn)
   (exn-message exn))
+
+;; ---------- Internal Procedures
+
+(define (validate-url url)
+  (cond
+    [(non-empty-string? url)
+     (define parsed (string->url url))
+     (and (and (string? (url-scheme parsed))
+               (string-prefix? (url-scheme parsed) "http"))
+          (non-empty-string? (url-host parsed))
+          (url-path-absolute? parsed))]
+    [else #f]))
+
+;; ---------- Internal Tests
 
 (module+ test
   (require rackunit)

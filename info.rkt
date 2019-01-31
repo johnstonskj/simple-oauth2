@@ -11,22 +11,26 @@
 (define version "0.1")
 (define pkg-authors '(Simon Johnston))
 
-(define deps '(
-  "base"
-  "web-server-lib"
-  "crypto-lib"
-  "net-jwt"
-  "rackunit-lib"
-  "racket-index"))
-(define build-deps '(
-  "scribble-lib"
-  "racket-doc"
-  "sandbox-lib"
-  "cover-coveralls"))
+(define deps
+  '("base"
+    "web-server-lib"
+    "crypto-lib"
+    "net-jwt"
+    "rackunit-lib"
+    "racket-index"))
+(define build-deps
+  '("scribble-lib"
+    "racket-doc"
+    "sandbox-lib"
+    "cover-coveralls"))
 
-(define scribblings '(("scribblings/simple-oauth2.scrbl" (multi-page))))
+(define scribblings
+  '(("scribblings/simple-oauth2.scrbl" (multi-page))))
 
-(define test-omit-paths '("scribblings" "private"))
+(define test-omit-paths
+  '("scribblings" "private"))
 
-(define racket-launcher-names '("fitbit"))
-(define racket-launcher-libraries '("tools/fitbit.rkt"))
+(define racket-launcher-names
+  '("fitbit"))
+(define racket-launcher-libraries
+  '("tools/fitbit.rkt"))

@@ -9,13 +9,12 @@
 
 (require racket/contract)
 
-(provide
-  get-current-user-name
-  get-current-user-name/bytes
-  get-preference
-  set-preference!
-  (rename-out [load-or-create-preferences load-preferences])
-  save-preferences)
+(provide get-current-user-name
+         get-current-user-name/bytes
+         get-preference
+         set-preference!
+         (rename-out [load-or-create-preferences load-preferences])
+         save-preferences)
 
 ;; ---------- Requirements
 
@@ -35,8 +34,8 @@
 
 (define (get-current-user-name/bytes)
   (environment-variables-ref 
-    (current-environment-variables) 
-    #"USER"))
+   (current-environment-variables) 
+   #"USER"))
 
 ; (hash/c symbol? any/c)
 (define-cached-file preferences 'home-dir ".oauth2.rkt")
@@ -52,21 +51,21 @@
 (define (load-or-create-preferences)
   (define path (get-preferences-file-path))
   (cond 
-   [(false? (file-exists? path))
-    (log-oauth2-info "creating new config file in ~a" path)
-    (crypto-factories (list libcrypto-factory))
-    (define cipher-impl '(aes gcm))
-    (set-preference! 'cipher-impl cipher-impl)
-    (set-preference! 'cipher-key (generate-cipher-key cipher-impl))
-    (set-preference! 'cipher-iv (generate-cipher-iv cipher-impl))
-    (set-preference! 'redirect-host-type 'localhost)
-    (set-preference! 'redirect-host-port 8080)
-    (set-preference! 'redirect-path "/oauth/authorization")
-    (set-preference! 'redirect-ssl-certificate #f)
-    (set-preference! 'redirect-ssl-key #f)
-    (save-preferences)]
-   [else
-    (load-preferences)]))
+    [(false? (file-exists? path))
+     (log-oauth2-info "creating new config file in ~a" path)
+     (crypto-factories (list libcrypto-factory))
+     (define cipher-impl '(aes gcm))
+     (set-preference! 'cipher-impl cipher-impl)
+     (set-preference! 'cipher-key (generate-cipher-key cipher-impl))
+     (set-preference! 'cipher-iv (generate-cipher-iv cipher-impl))
+     (set-preference! 'redirect-host-type 'localhost)
+     (set-preference! 'redirect-host-port 8080)
+     (set-preference! 'redirect-path "/oauth/authorization")
+     (set-preference! 'redirect-ssl-certificate #f)
+     (set-preference! 'redirect-ssl-key #f)
+     (save-preferences)]
+    [else
+     (load-preferences)]))
 
 ;; ---------- Startup procedures
 

@@ -32,10 +32,10 @@
      #`(define-cached-file id root path #,(symbol->string (syntax->datum #'id)) #f)]
     [(_ id root path file-name predicate)
      (and (identifier? #'id)
-;          (or (string? (syntax->datum #'root)) (symbol? (syntax->datum #'root)))
+          ;          (or (string? (syntax->datum #'root)) (symbol? (syntax->datum #'root)))
           (string? (syntax->datum #'path))
           (string? (syntax->datum #'file-name)))
-;          (procedure? (syntax->datum #'predicate)))
+     ;          (procedure? (syntax->datum #'predicate)))
      (with-syntax ([cache (format-id #'id "~a-cache" #'id)]
                    [loader (format-id #'id "load-~a" #'id)]
                    [saver (format-id #'id "save-~a" #'id)]
@@ -53,7 +53,7 @@
              #t)
            (define (loader)
              (define load-path (file-path))
-               (when (file-exists? load-path)
+             (when (file-exists? load-path)
                (call-with-input-file load-path
                  (lambda (in)
                    (define value (read in))
@@ -65,14 +65,14 @@
            (define (file-path)
              (define dir-path
                (build-path
-                 (cond
+                (cond
                   [(string? root)
                    (string->path root)]
                   [(symbol? root)
                    (find-system-path 'home-dir)]
                   [else (error "invalid file path root")])
-                 path))
+                path))
              (make-directory* dir-path)
              (build-path dir-path file-name))
 
-       ))]))
+           ))]))

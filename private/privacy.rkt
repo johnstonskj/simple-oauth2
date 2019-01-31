@@ -9,10 +9,9 @@
 
 (require racket/contract)
 
-(provide
-  encrypt-secret
-  decrypt-secret
-  encode-client)
+(provide encrypt-secret
+         decrypt-secret
+         encode-client)
 
 ;; ---------- Requirements
 
@@ -52,7 +51,7 @@
   ;; string, `Y2xpZW50X2lkOmNsaWVudCBzZWNyZXQ=`, is decoded as
   ;; `[client_id]:[client_secret]`.
   (base64-encode
-    (string->bytes/latin-1
-      (format "~a:~a"
-              (form-urlencoded-encode (client-id client))
-              (form-urlencoded-encode (client-secret client))))))
+   (string->bytes/latin-1
+    (format "~a:~a"
+            (form-urlencoded-encode (client-id client))
+            (form-urlencoded-encode (client-secret client))))))

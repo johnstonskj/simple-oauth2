@@ -9,13 +9,12 @@
 
 (require racket/contract)
 
-(provide
-  current-default-user
-  get-applications
-  get-token
-  set-token!
-  save-tokens
-  load-tokens)
+(provide current-default-user
+         get-applications
+         get-token
+         set-token!
+         save-tokens
+         load-tokens)
 
 ;; ---------- Requirements
 
@@ -38,8 +37,8 @@
 (define (get-applications user-name)
   (log-oauth2-debug "get-applications for ~a" user-name)
   (filter
-    (lambda (key) (equal? (first key) user-name))
-    (hash-keys tokens-cache)))
+   (lambda (key) (equal? (first key) user-name))
+   (hash-keys tokens-cache)))
 
 (define (get-token user-name service-name)
   (log-oauth2-debug "get-token for ~a, ~a" user-name service-name)
@@ -50,7 +49,10 @@
      (struct-copy token
                   a-token
                   [access-token (decrypt-secret (token-access-token a-token))]
-                  [refresh-token (decrypt-secret (token-refresh-token a-token))])]
+                  [refresh-token (decrypt-secret (token-refresh-token a-token))]
+                  [expires (if (> (current-seconds) (token-expires a-token))
+                               -1
+                               (token-expires a-token))])]
     [else #f]))
 
 (define (set-token! user-name service-name a-token)

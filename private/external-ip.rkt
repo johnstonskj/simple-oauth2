@@ -30,10 +30,10 @@
   (when (false? *cached-ip*)
     (define include-server
       (cond 
-       [ssl-available?
-        (λ (s) #t)]
-       [else
-        (λ (s) (false? (third s)))]))
+        [ssl-available?
+         (λ (s) #t)]
+        [else
+         (λ (s) (false? (third s)))]))
     (for/or ([server (filter include-server external-ip-servers)])
       (set! *cached-ip* (try-external-ip server))
       *cached-ip*))
@@ -45,7 +45,7 @@
   (define-values 
     (status headers in-port)
     (http-sendrecv
-      (first server)
-      (second server)
-      #:ssl? (third server)))
+     (first server)
+     (second server)
+     #:ssl? (third server)))
   (port->string in-port))

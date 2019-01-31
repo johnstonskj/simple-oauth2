@@ -9,11 +9,10 @@
 
 (require racket/contract)
 
-(provide
-  get-client
-  set-client!
-  load-clients
-  save-clients)
+(provide get-client
+         set-client!
+         load-clients
+         save-clients)
 
 ;; ---------- Requirements
 

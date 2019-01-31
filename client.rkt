@@ -15,16 +15,18 @@
 ;
 ; OAuth 2.0 Token Introspection <https://tools.ietf.org/html/rfc7662>
 
-(provide
-  create-random-state
-  create-pkce-challenge
-  request-authorization-code
-  authorization-complete
-  fetch-token/from-code
-  fetch-token/implicit
-  fetch-token/with-password
-  fetch-token/with-client
-  make-request-auth-header)
+(provide create-random-state
+         create-pkce-challenge
+         request-authorization-code
+         authorization-complete
+         fetch-token/from-code
+         fetch-token/implicit
+         fetch-token/with-password
+         fetch-token/with-client
+         refresh-token
+         revoke-token
+         introspect-token
+         make-authorization-header)
 
 ;; ---------- Requirements
 
@@ -49,10 +51,10 @@
          oauth2/private/privacy)
 
 (lazy-require
-  [oauth2/private/redirect-server
-    (get-redirect-uri
-     record-auth-request
-     shutdown-redirect-server)])
+ [oauth2/private/redirect-server
+  (get-redirect-uri
+   record-auth-request
+   shutdown-redirect-server)])
 
 ;; ---------- Internal types
 
@@ -110,25 +112,25 @@
   (define query-string (alist->form-urlencoded query))
   (define full-url
     (url->string
-      (combine-url/relative
-        (string->url (client-authorization-uri client))
-        (string-append "?" query-string))))
+     (combine-url/relative
+      (string->url (client-authorization-uri client))
+      (string-append "?" query-string))))
   (parameterize ([current-error-port (open-output-string "stderr")])
     (define cmd (format (match (system-type 'os)
                           ['windows "cmd /c start \"~a\""]
                           ['macosx "open \"~a\""]
                           ['unix "xdg-open \"~a\""])
-                         full-url))
-  (log-oauth2-debug "starting browser: ~a" cmd)
+                        full-url))
+    (log-oauth2-debug "starting browser: ~a" cmd)
     (define success? (system cmd))
     (cond
       [success?
-        ; return the response channel
-        (record-auth-request use-state)]
+       ; return the response channel
+       (record-auth-request use-state)]
       [else
-        (define error-string (get-output-string (current-error-port)))
-        (log-oauth2-error "system call failed. error: ~a" error-string)
-        (error "system call failed. error: " error-string)])))
+       (define error-string (get-output-string (current-error-port)))
+       (log-oauth2-error "system call failed. error: ~a" error-string)
+       (error "system call failed. error: " error-string)])))
 
 (define (authorization-complete)
   (shutdown-redirect-server))
@@ -138,14 +140,14 @@
   ;; See <https://tools.ietf.org/html/rfc7636> section 4.5
   (log-oauth2-info "fetch-token/from-code, service ~a, code ~a" (client-service-name client) authorization-code)
   (fetch-token-common
-    client
-    (append `((grant_type . "authorization_code")
-              (code . ,authorization-code)
-              (redirect_uri . ,(get-redirect-uri))
-              (client_id . ,(client-id client)))
-            (if (false? challenge)
-                '()
-                `((code_verifier . ,(pkce-verifier challenge)))))))
+   client
+   (append `((grant_type . "authorization_code")
+             (code . ,authorization-code)
+             (redirect_uri . ,(get-redirect-uri))
+             (client_id . ,(client-id client)))
+           (if (false? challenge)
+               '()
+               `((code_verifier . ,(pkce-verifier challenge)))))))
 
 (define (fetch-token/implicit client scopes #:state [state #f] #:audience [audience #f])
   ;; See <https://tools.ietf.org/html/rfc6749> section 4.2.1
@@ -155,44 +157,46 @@
   ;; See <https://tools.ietf.org/html/rfc6749> section 4.3.2
   (log-oauth2-info "fetch-token/with-password, service ~a, username ~a" (client-service-name client) username)
   (fetch-token-common
-    client
-    (append (list (cons 'grant-type "password")
-                  (cons 'username username)
-                  (cons 'password password)
-                  (cons 'client_id (client-id client))))))
+   client
+   (append (list (cons 'grant-type "password")
+                 (cons 'username username)
+                 (cons 'password password)
+                 (cons 'client_id (client-id client))))))
 
 (define (fetch-token/with-client client)
   ;; See <https://tools.ietf.org/html/rfc6749> section 4.4.2
   (log-oauth2-info "fetch-token/with-client, service ~a" (client-service-name client))
   (fetch-token-common
-    client
-    (append (list (cons 'grant_type "password")
-                  (cons 'client_id (client-id client))
-                  (cons 'client_secret (client-secret client))))))
+   client
+   (append (list (cons 'grant_type "password")
+                 (cons 'client_id (client-id client))
+                 (cons 'client_secret (client-secret client))))))
 
 (define (refresh-token client token)
   ;; See <https://tools.ietf.org/html/rfc6749> section 6
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
-  (fetch-token-common
-    client
-    (append (list (cons 'grant_type "refresh_token")
-                  (cons 'refresh_token (token-refresh-token token))
-                  (cons 'client_id (client-id client))
-                  (cons 'client_secret (client-secret client))))))
+  (define response 
+    (fetch-token-common
+     client
+     (append (list (cons 'grant_type "refresh_token")
+                   (cons 'refresh_token (token-refresh-token token))
+                   (cons 'client_id (client-id client))
+                   (cons 'client_secret (client-secret client))))))
+  (log-oauth2-debug "refres-token, response: ~a" response))
 
 (define (revoke-token client token revoke-type)
   ;; See <https://tools.ietf.org/html/rfc7009> section 2.1
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
   (fetch-token-common
-    client
-    (append (list (cons 'token_type revoke-type)
-                  (cons 'token
-                    (cond
-                      [(equal? revoke-type 'access-token)
-                       (token-access-token token)]
-                      [(equal? revoke-type 'refresh-token)
-                       (token-refresh-token token)]
-                      [else (error "unknown token type: " revoke-type)]))))))
+   client
+   (append (list (cons 'token_type revoke-type)
+                 (cons 'token
+                       (cond
+                         [(equal? revoke-type 'access-token)
+                          (token-access-token token)]
+                         [(equal? revoke-type 'refresh-token)
+                          (token-refresh-token token)]
+                         [else (error "unknown token type: " revoke-type)]))))))
 
 (define (introspect-token client token token-type)
   ;; See <https://tools.ietf.org/html/rfc7662> section 2.1
@@ -201,17 +205,17 @@
   ;; and then a valid access token used for making the Introspect request.
   (log-oauth2-info "introspect-token, service ~a" (client-service-name client))
   (fetch-token-common
-    client
-    (append (list (cons 'token_type_hint token-type)
-                  (cons 'token
-                    (cond
-                      [(equal? token-type 'access-token)
-                       (token-access-token token)]
-                      [(equal? token-type 'refresh-token)
-                       (token-refresh-token token)]
-                      [else (error "unknown token type: " token-type)]))))))
+   client
+   (append (list (cons 'token_type_hint token-type)
+                 (cons 'token
+                       (cond
+                         [(equal? token-type 'access-token)
+                          (token-access-token token)]
+                         [(equal? token-type 'refresh-token)
+                          (token-refresh-token token)]
+                         [else (error "unknown token type: " token-type)]))))))
 
-(define (make-request-auth-header token)
+(define (make-authorization-header token)
   (string->bytes/utf-8 (format "Authorization: ~a ~a" (token-type token) (token-access-token token))))
 
 ;; ---------- Internal Implementation
@@ -220,31 +224,30 @@
   (define header (format "Authorization: Basic ~a" (string-trim (bytes->string/latin-1 (encode-client client)))))
   (define response
     (do-post/form-encoded-list/json
-      (string->url (client-token-uri client))
-      (list header)
-      data-list))
+     (string->url (client-token-uri client))
+     (list header)
+     data-list))
   (cond
     [(= (first response) 200)
      (token-from-response (last response))]
     [else
-      ; TODO: check for JSON "error"
-      (response)]))
+     (response)]))
 
 (define (do-post/form-encoded-list/json uri headers data-list)
   (define response
     (do-post
-      uri
-      headers
-      (alist->form-urlencoded data-list)
-      "application/x-www-form-urlencoded"))
+     uri
+     headers
+     (alist->form-urlencoded data-list)
+     "application/x-www-form-urlencoded"))
   (list-update response 3 bytes->jsexpr))
 
 (define (do-post/form-encoded-list uri headers data-list)
   (do-post
-    uri
-    headers
-    (alist->form-urlencoded data-list)
-    "application/x-www-form-urlencoded"))
+   uri
+   headers
+   (alist->form-urlencoded data-list)
+   "application/x-www-form-urlencoded"))
 
 (define (do-post uri request-headers data data-type)
   (log-oauth2-debug "(http-sendrecv")
@@ -257,13 +260,13 @@
   (define-values
     (status response-headers in-port)
     (http-sendrecv
-      (url-host uri)
-      (url->string uri)
-;      #:port (false? (url-port uri)
-      #:ssl? (equal? (url-scheme uri) "https")
-      #:method "POST"
-      #:headers (cons (format "Content-Type: ~a" data-type) request-headers)
-      #:data data))
+     (url-host uri)
+     (url->string uri)
+     ;      #:port (false? (url-port uri)
+     #:ssl? (equal? (url-scheme uri) "https")
+     #:method "POST"
+     #:headers (cons (format "Content-Type: ~a" data-type) request-headers)
+     #:data data))
   (log-oauth2-debug "(values ~s ~s #port)" status response-headers)
   (parse-response status response-headers in-port))
 
@@ -280,51 +283,50 @@
   (define-values (code msg) (string-split-first rest #\space))
   (define response 
     (list
-      (string->number code)
-      msg
-      (make-hash 
-        (for/list ([header headers])
-          (define-values (k v) (string-split-first (bytes->string/utf-8 header) #\:))
-          (cons k (string-trim (substring v 1)))))
-      (port->bytes in-port)))
+     (string->number code)
+     msg
+     (make-hash 
+      (for/list ([header headers])
+        (define-values (k v) (string-split-first (bytes->string/utf-8 header) #\:))
+        (cons k (string-trim (substring v 1)))))
+     (port->bytes in-port)))
   (when (<= 400 (first response) 599)
     (log-oauth2-error "error response, code ~a, body ~a" (first response) (fourth response))
     (define content-type (hash-ref (third response) "Content-Type"))
     (cond
       [(string-prefix? content-type APPLICATION/JSON)
-        (define json-body (bytes->jsexpr (fourth response)))
-        (cond
-          [(hash-has-key? json-body 'error)
-            (raise (make-exn:fail:oauth2 (hash-ref json-body 'error 'unknown)
-                                         (hash-ref json-body 'error_description "")
-                                         (hash-ref json-body 'error_uri "")
-                                         (hash-ref json-body 'state "")
-                                         (current-continuation-marks)))]
-          [(hash-has-key? json-body 'errors)
-            ;; Note, this is a Fitbit specific deviation from the standard!
-            (define json-error (first (hash-ref json-body 'errors '())))
-            (raise (make-exn:fail:oauth2 (hash-ref json-error 'errorType 'unknown)
-                                         (hash-ref json-error 'message "")
-                                         ""
-                                         ""
-                                         (current-continuation-marks)))]
-          [else             
-            (raise (make-exn:fail:oauth2 'unknown
-                                         (fourth response)
-                                         ""
-                                         ""
-                                         (current-continuation-marks)))])]
+       (define json-body (bytes->jsexpr (fourth response)))
+       (cond
+         [(hash-has-key? json-body 'error)
+          (raise (make-exn:fail:oauth2 (hash-ref json-body 'error 'unknown)
+                                       (hash-ref json-body 'error_description "")
+                                       (hash-ref json-body 'error_uri "")
+                                       (hash-ref json-body 'state "")
+                                       (current-continuation-marks)))]
+         [(hash-has-key? json-body 'errors)
+          ;; Note, this is a Fitbit specific deviation from the standard!
+          (define json-error (first (hash-ref json-body 'errors '())))
+          (raise (make-exn:fail:oauth2 (hash-ref json-error 'errorType 'unknown)
+                                       (hash-ref json-error 'message "")
+                                       ""
+                                       ""
+                                       (current-continuation-marks)))]
+         [else             
+          (raise (make-exn:fail:oauth2 'unknown
+                                       (fourth response)
+                                       ""
+                                       ""
+                                       (current-continuation-marks)))])]
       [else
-        (raise (apply make-exn:fail:http response))]))
+       (raise (apply make-exn:fail:http response))]))
   response)
   
 
 (define (token-from-response json)
   (make-token
-    (hash-ref json 'access_token)
-    (hash-ref json 'token_type)
-    (hash-ref json 'refresh_token #f)
-    (hash-ref json 'audience #f)
-    (string-split (hash-ref json 'scope "") ",")
-    (seconds->date
-      (+ (current-seconds) (hash-ref json 'expires_in "0")))))
+   (hash-ref json 'access_token)
+   (hash-ref json 'token_type)
+   (hash-ref json 'refresh_token #f)
+   (hash-ref json 'audience #f)
+   (string-split (hash-ref json 'scope "") ",")
+   (+ (current-seconds) (hash-ref json 'expires_in "0"))))

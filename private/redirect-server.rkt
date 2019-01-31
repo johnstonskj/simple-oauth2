@@ -61,124 +61,124 @@
     (define continue
       (cond
         [(auth-request? msg)
-          (log-oauth2-debug "recording auth request ~a" msg)
-          (hash-set! requests (auth-request-state msg) (auth-request-channel msg))
-          #t]
+         (log-oauth2-debug "recording auth request ~a" msg)
+         (hash-set! requests (auth-request-state msg) (auth-request-channel msg))
+         #t]
         [(auth-response? msg)
-          (log-oauth2-debug "recording auth response ~a" msg)
-          (define state (auth-response-state msg))
-          (define response-channel (hash-ref requests state))
-          (channel-put response-channel (auth-response-code msg))
-          (hash-remove! requests state)
-          #t]
+         (log-oauth2-debug "recording auth response ~a" msg)
+         (define state (auth-response-state msg))
+         (define response-channel (hash-ref requests state))
+         (channel-put response-channel (auth-response-code msg))
+         (hash-remove! requests state)
+         #t]
         [(equal? msg 'shutdown)
-          (log-oauth2-debug "recording showdown request!")
-          (drain-request-channel requests)
-          (custodian-shutdown-all httpd-custodian)
-          #f]
+         (log-oauth2-debug "recording showdown request!")
+         (drain-request-channel requests)
+         (custodian-shutdown-all httpd-custodian)
+         #f]
         [else
-          (log-oauth2-error "unexpected message: ~a" msg)
-          #t]))
+         (log-oauth2-error "unexpected message: ~a" msg)
+         #t]))
     (when continue
       (next-request (channel-get request-channel)))))
 
 (define (drain-request-channel requests)
   (hash-for-each
-    requests
-    (lambda (k v)
-      (log-oauth2-debug "cancelling request, state: ~a" k)
-      (channel-put v #f))))
+   requests
+   (lambda (k v)
+     (log-oauth2-debug "cancelling request, state: ~a" k)
+     (channel-put v #f))))
 
 (define (http-server-thread)
   (cond
     [(or (false? (server-config-ssl-certificate redirect-server))
          (false? (server-config-ssl-key redirect-server)))
-      (log-oauth2-info "starting HTTP server")
-      (serve/servlet
-        auth-response-servlet
-        #:port (server-config-port redirect-server)
-        #:servlet-path (server-config-path redirect-server)
-        #:listen-ip #f
-        #:launch-browser? #f
-        #:log-file (current-output-port)
-        #:log-format 'apache-default)]
+     (log-oauth2-info "starting HTTP server")
+     (serve/servlet
+      auth-response-servlet
+      #:port (server-config-port redirect-server)
+      #:servlet-path (server-config-path redirect-server)
+      #:listen-ip #f
+      #:launch-browser? #f
+      #:log-file (current-output-port)
+      #:log-format 'apache-default)]
     [else
-      (log-oauth2-info "starting HTTPS server")
-      (serve/servlet
-        auth-response-servlet
-        #:port (server-config-port redirect-server)
-        #:servlet-path (server-config-path redirect-server)
-        #:listen-ip #f
-        #:ssl-cert (server-config-ssl-certificate redirect-server)
-        #:ssl-key (server-config-ssl-key redirect-server)
-        #:launch-browser? #f
-        #:log-file (current-output-port)
-        #:log-format 'apache-default)]))
+     (log-oauth2-info "starting HTTPS server")
+     (serve/servlet
+      auth-response-servlet
+      #:port (server-config-port redirect-server)
+      #:servlet-path (server-config-path redirect-server)
+      #:listen-ip #f
+      #:ssl-cert (server-config-ssl-certificate redirect-server)
+      #:ssl-key (server-config-ssl-key redirect-server)
+      #:launch-browser? #f
+      #:log-file (current-output-port)
+      #:log-format 'apache-default)]))
 
 ; ?code=AUTH_CODE_HERE&state=1234zyx
 (define (auth-response-servlet req)
-;  (define path (path/param-path (car (url-path (request-uri req)))))
+  ;  (define path (path/param-path (car (url-path (request-uri req)))))
   (define params (make-hash (request-bindings req)))
   (cond
     [(and (hash-has-key? params 'state)
           (hash-has-key? params 'code))
-      (define state (hash-ref params 'state))
-      (define code (hash-ref params 'code))
-      (channel-put request-channel (make-auth-response state code))
-      (log-oauth2-info "received a code ~a for state ~a" code state)
-      (response/full
-        200
-        #"OK"
-        (current-seconds)
-        TEXT/HTML-MIME-TYPE
-        (list)
-        (list #"<html><body><p>"
-              #"Authenticated, code: "
-              (string->bytes/utf-8 code)
-              #"</p></body></html>"))]
+     (define state (hash-ref params 'state))
+     (define code (hash-ref params 'code))
+     (channel-put request-channel (make-auth-response state code))
+     (log-oauth2-info "received a code ~a for state ~a" code state)
+     (response/full
+      200
+      #"OK"
+      (current-seconds)
+      TEXT/HTML-MIME-TYPE
+      (list)
+      (list #"<html><body><p>"
+            #"Authenticated, code: "
+            (string->bytes/utf-8 code)
+            #"</p></body></html>"))]
     [(hash-has-key? params 'error)
-      (log-oauth2-error "received ~a from auth server for state ~a"
-                        (hash-ref params 'error)
-                        (hash-ref params 'state ""))
-      (channel-put request-channel
-                   (make-exn:fail:oauth2 (hash-ref params 'error)
-                                         (hash-ref params 'error_description "")
-                                         (hash-ref params 'error_uri)
-                                         (hash-ref params 'state)
-                                         (current-continuation-marks)))
-      (response/full
-        200
-        #"OK-ish"
-        (current-seconds)
-        TEXT/HTML-MIME-TYPE
-        (list)
-        (list #"<html><body><p>"
-              #"Error "
-              (hash-ref params 'error "")
-              #" (for state: "
-              (hash-ref params 'state "")
-              #")</br>"
-              (hash-ref params 'error_description "")
-              #"</br> For more information, see "
-              (hash-ref params 'error_uri "")
-              #"</p></body></html>"))]
+     (log-oauth2-error "received ~a from auth server for state ~a"
+                       (hash-ref params 'error)
+                       (hash-ref params 'state ""))
+     (channel-put request-channel
+                  (make-exn:fail:oauth2 (hash-ref params 'error)
+                                        (hash-ref params 'error_description "")
+                                        (hash-ref params 'error_uri)
+                                        (hash-ref params 'state)
+                                        (current-continuation-marks)))
+     (response/full
+      200
+      #"OK-ish"
+      (current-seconds)
+      TEXT/HTML-MIME-TYPE
+      (list)
+      (list #"<html><body><p>"
+            #"Error "
+            (hash-ref params 'error "")
+            #" (for state: "
+            (hash-ref params 'state "")
+            #")</br>"
+            (hash-ref params 'error_description "")
+            #"</br> For more information, see "
+            (hash-ref params 'error_uri "")
+            #"</p></body></html>"))]
     [else
-      (log-oauth2-error "received an unknown error from auth server: ~a" params)
-      (channel-put request-channel
-                   (make-exn:fail:http 500
-                                       "UNKNOWN ERROR"
-                                       params
-                                       ""
-                                       (current-continuation-marks)))
-      (response/full
-        500
-        #"SERVER ERROR"
-        (current-seconds)
-        TEXT/HTML-MIME-TYPE
-        (list)
-        (list #"<html><body><p>"
-              #"An error occurred :( "
-              #"</p></body></html>"))]))
+     (log-oauth2-error "received an unknown error from auth server: ~a" params)
+     (channel-put request-channel
+                  (make-exn:fail:http 500
+                                      "UNKNOWN ERROR"
+                                      params
+                                      ""
+                                      (current-continuation-marks)))
+     (response/full
+      500
+      #"SERVER ERROR"
+      (current-seconds)
+      TEXT/HTML-MIME-TYPE
+      (list)
+      (list #"<html><body><p>"
+            #"An error occurred :( "
+            #"</p></body></html>"))]))
 
 (define-struct server-config
   (host
@@ -189,15 +189,15 @@
 
 (define redirect-server
   (make-server-config
-    (match (get-preference 'redirect-host-type)
-          ['loopback "127.0.0.1"]
-          ['localhost "localhost"]
-          ['hostname (gethostname)]
-          ['external (get-external-ip)])
-    (get-preference 'redirect-host-port)
-    (get-preference 'redirect-path)
-    (get-preference 'redirect-ssl-certificate)
-    (get-preference 'redirect-ssl-key)))
+   (match (get-preference 'redirect-host-type)
+     ['loopback "127.0.0.1"]
+     ['localhost "localhost"]
+     ['hostname (gethostname)]
+     ['external (get-external-ip)])
+   (get-preference 'redirect-host-port)
+   (get-preference 'redirect-path)
+   (get-preference 'redirect-ssl-certificate)
+   (get-preference 'redirect-ssl-key)))
 
 (define redirect-server-uri
   (format "http~a://~a:~a~a"
@@ -210,8 +210,8 @@
 (define (run-redirect-coordinator)
   (log-oauth2-info "run-redirect-coordinator")
   (thread
-    (lambda ()
-      (log-oauth2-debug "run-redirect-coordinator thread calling coordinator")
-      (coordinator))))
+   (lambda ()
+     (log-oauth2-debug "run-redirect-coordinator thread calling coordinator")
+     (coordinator))))
 
 (void (run-redirect-coordinator))

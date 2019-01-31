@@ -5,11 +5,10 @@
 ;;
 ;; Copyright (c) 2019 Simon Johnston (johnstonskj@gmail.com).
 
-(provide
-  initiate-code-flow
-  initiate-implicit-flow
-  initiate-application-flow
-  initiate-password-flow)
+(provide initiate-code-flow
+         initiate-implicit-flow
+         initiate-application-flow
+         initiate-password-flow)
 
 ;; ---------- Requirements
 
@@ -27,11 +26,11 @@
 
   (define response-channel
     (request-authorization-code
-      client 
-      scopes
-      #:state state 
-      #:challenge challenge 
-      #:audience audience))
+     client 
+     scopes
+     #:state state 
+     #:challenge challenge 
+     #:audience audience))
 
   (define authorization-code
     (channel-get response-channel))
@@ -42,17 +41,17 @@
 
   (define token-response
     (fetch-token/from-code
-      client 
-      authorization-code
-      #:challenge challenge))
+     client 
+     authorization-code
+     #:challenge challenge))
   (log-oauth2-debug "fetch-token/from-code returned ~a" token-response)
 
   (set-token!
-    (if (false? user-name)
-        current-default-user
-        user-name)
-    (client-service-name client)
-    token-response)
+   (if (false? user-name)
+       current-default-user
+       user-name)
+   (client-service-name client)
+   token-response)
   (save-tokens)
 
   token-response)
@@ -62,3 +61,14 @@
 (define (initiate-application-flow) #f)
 
 (define (initiate-password-flow) #f)
+
+(define (make-authorization-header/for-client client user-name)
+  (define token (get-token user-name (client-service-name client)))
+  (define a-token 
+    (cond
+      [(or (false? (token-expires token)
+                   (= (token-expires token) -1)))
+       (refresh-token client token)]
+      [else token]))
+  (make-authorization-header a-token))
+

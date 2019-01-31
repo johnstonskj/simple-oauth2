@@ -29,13 +29,13 @@
 
 (define fitbit-client
   (make-client
-    FITBIT-SERVICE-NAME
-    #f
-    #f
-    "https://www.fitbit.com/oauth2/authorize"
-    "https://api.fitbit.com/oauth2/token"
-    #:revoke "https://api.fitbit.com/oauth2/revoke"
-    #:introspect "https://api.fitbit.com/1.1/oauth2/introspect"))
+   FITBIT-SERVICE-NAME
+   #f
+   #f
+   "https://www.fitbit.com/oauth2/authorize"
+   "https://api.fitbit.com/oauth2/token"
+   #:revoke "https://api.fitbit.com/oauth2/revoke"
+   #:introspect "https://api.fitbit.com/1.1/oauth2/introspect"))
 
 (define c-client-id (make-parameter #f))
 (define c-client-secret (make-parameter #f))
@@ -55,9 +55,10 @@
        (displayln "No client credentials stored, please authenticate.")
        (perform-authentication maybe-client)]
       [(false? (get-token (c-user) FITBIT-SERVICE-NAME))
-        (displayln "No authentication code stored, please authenticate.")
-        (perform-authentication maybe-client)]
+       (displayln "No authentication code stored, please authenticate.")
+       (perform-authentication maybe-client)]
       [else
+       (displayln "Authentication token already stored.")
        (perform-api-command)]))
 
   (with-logging-to-port
@@ -71,80 +72,80 @@
 (define (perform-authentication maybe-client)
   (define c-scopes
     (command-line
-      #:program COMMAND
-      ;; ---------- Common commands
-      #:once-any
-      [("-v" "--verbose")
-             "Compile with verbose messages"
-             (logging-level 'info)]
-      [("-V" "--very-verbose")
-             "Compile with very verbose messages"
-             (logging-level 'debug)]
-      ;; ---------- Authentication flow
-      #:once-each
-      [("-i" "--client-id") id "Registered client ID"
-                            (c-client-id id)]
-      [("-s" "--client-secret") secret "Registered client secret"
-                                (c-client-secret secret)]
-      #:args (scope . scopes)
-      (cons scope scopes)))
+     #:program COMMAND
+     ;; ---------- Common commands
+     #:once-any
+     [("-v" "--verbose")
+      "Compile with verbose messages"
+      (logging-level 'info)]
+     [("-V" "--very-verbose")
+      "Compile with very verbose messages"
+      (logging-level 'debug)]
+     ;; ---------- Authentication flow
+     #:once-each
+     [("-i" "--client-id") id "Registered client ID"
+                           (c-client-id id)]
+     [("-s" "--client-secret") secret "Registered client secret"
+                               (c-client-secret secret)]
+     #:args (scope . scopes)
+     (cons scope scopes)))
 
   (lambda ()
     (cond
       [(or (false? (c-user))
            (false? (c-client-id))
            (false? (c-client-secret)))
-      (displayln "fitbit: expects -i -s on the command line, try -h for help")]
+       (displayln "fitbit: expects -i -s on the command line, try -h for help")]
       [else
-        (define real-client
-          (cond
-            [(false? maybe-client)
+       (define real-client
+         (cond
+           [(false? maybe-client)
             (struct-copy client fitbit-client
-              [id (c-client-id)]
-              [secret (c-client-secret)])]
-            [(false? (client-id maybe-client))
+                         [id (c-client-id)]
+                         [secret (c-client-secret)])]
+           [(false? (client-id maybe-client))
             (struct-copy client maybe-client
-              [id (c-client-id)]
-              [secret (c-client-secret)])]
-            [else maybe-client]))
-        (set-client! real-client)
-        (save-clients)
+                         [id (c-client-id)]
+                         [secret (c-client-secret)])]
+           [else maybe-client]))
+       (set-client! real-client)
+       (save-clients)
 
-        (with-handlers
-          ([exn:fail:http?
-            (lambda (exn)
-              (displayln
+       (with-handlers
+           ([exn:fail:http?
+             (lambda (exn)
+               (displayln
                 (format "An HTTP error occurred: ~a (~a)" 
-                  (exn-message exn)
-                  (exn:fail:http-code exn))))]
-           [exn:fail:oauth2?
-            (lambda (exn)
-              (displayln exn)
-              (display "An OAuth error occurred: ")
-              (displayln (exn:fail:oauth2-error exn))
-              (display ">>> ")
-              (when (non-empty-string? (exn:fail:oauth2-error-description exn))
-                (displayln (exn:fail:oauth2-error-description exn)))
-              (when (non-empty-string? (exn:fail:oauth2-error-uri exn))
-                (displayln (exn:fail:oauth2-error-uri exn))))])
-          (define token
-            (initiate-code-flow
-              real-client
-              c-scopes
-              #:user-name (c-user)))
+                        (exn-message exn)
+                        (exn:fail:http-code exn))))]
+            [exn:fail:oauth2?
+             (lambda (exn)
+               (displayln exn)
+               (display "An OAuth error occurred: ")
+               (displayln (exn:fail:oauth2-error exn))
+               (display ">>> ")
+               (when (non-empty-string? (exn:fail:oauth2-error-description exn))
+                 (displayln (exn:fail:oauth2-error-description exn)))
+               (when (non-empty-string? (exn:fail:oauth2-error-uri exn))
+                 (displayln (exn:fail:oauth2-error-uri exn))))])
+         (define token
+           (initiate-code-flow
+            real-client
+            c-scopes
+            #:user-name (c-user)))
 
-          (displayln (format "Fitbit returned authenication token: ~a" token)))])))
+         (displayln (format "Fitbit returned authenication token: ~a" token)))])))
 
 (define (perform-api-command)
   (command-line
-     #:program COMMAND
-     ;; ---------- Common commands
-     #:once-any
-     [("-v" "--verbose") "Compile with verbose messages"
-                         (logging-level 'info)]
-     [("-V" "--very-verbose") "Compile with very verbose messages"
-                         (logging-level 'debug)]
-     ;; ---------- API access commands
-     #:once-each
-     [("-o" "--output-file") path "Output file"
-                         (c-output-file path)]))
+   #:program COMMAND
+   ;; ---------- Common commands
+   #:once-any
+   [("-v" "--verbose") "Compile with verbose messages"
+                       (logging-level 'info)]
+   [("-V" "--very-verbose") "Compile with very verbose messages"
+                            (logging-level 'debug)]
+   ;; ---------- API access commands
+   #:once-each
+   [("-o" "--output-file") path "Output file"
+                           (c-output-file path)]))
