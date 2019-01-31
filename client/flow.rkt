@@ -62,6 +62,8 @@
 
 (define (initiate-password-flow) #f)
 
+;; ---------- Internal Procedures
+
 (define (make-authorization-header/for-client client user-name)
   (define token (get-token user-name (client-service-name client)))
   (define a-token 

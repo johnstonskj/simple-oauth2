@@ -33,4 +33,7 @@
          (displayln out))
        (check-eq? (string-length out) 0)))))
 
-(test-doc-coverage '(simple-oauth2))
+(test-doc-coverage
+ '(oauth2
+   oauth2/client
+   ))

@@ -38,6 +38,8 @@ Implementations of a few web APIs, including OAuth2, PicasaWeb, and Blogger}, an
 
 @table-of-contents[]
 
+@include-section["oauth2.scrbl"]
+
 @include-section["client.scrbl"]
 
 @include-section["storage.scrbl"]

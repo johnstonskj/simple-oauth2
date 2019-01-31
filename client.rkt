@@ -17,8 +17,10 @@
 
 (provide create-random-state
          create-pkce-challenge
+         
          request-authorization-code
          authorization-complete
+         
          fetch-token/from-code
          fetch-token/implicit
          fetch-token/with-password
@@ -26,6 +28,7 @@
          refresh-token
          revoke-token
          introspect-token
+         
          make-authorization-header)
 
 ;; ---------- Requirements
@@ -75,13 +78,6 @@
   (bytes->hex-string (crypto-random-bytes bytes)))
 
 (define (create-pkce-challenge [a-verifier #f])
-  ;; See <https://tools.ietf.org/html/rfc7636> section 4.1
-  ;; S256
-  ;;   code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
-  ;;   code-verifier = 43*128unreserved
-  ;;   unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
-  ;;   ALPHA = %x41-5A / %x61-7A
-  ;;   DIGIT = %x30-39
   (define verifier
     (cond
       [(false? a-verifier)
@@ -93,8 +89,6 @@
   (make-pkce verifier challenge "S256"))
 
 (define (request-authorization-code client scopes #:state [state #f] #:challenge [challenge #f] #:audience [audience #f])
-  ;; See <https://tools.ietf.org/html/rfc6749> section 4.1
-  ;; See <https://tools.ietf.org/html/rfc7636> section 4.3
   (log-oauth2-info "request-authorization-code from ~a" (client-service-name client))
   (define use-state (if (false? state) (create-random-state) state))
   (define query (append `((response_type . "code")
@@ -136,8 +130,6 @@
   (shutdown-redirect-server))
 
 (define (fetch-token/from-code client authorization-code #:challenge [challenge #f])
-  ;; See <https://tools.ietf.org/html/rfc6749> section 4.1.3
-  ;; See <https://tools.ietf.org/html/rfc7636> section 4.5
   (log-oauth2-info "fetch-token/from-code, service ~a, code ~a" (client-service-name client) authorization-code)
   (fetch-token-common
    client
@@ -150,11 +142,9 @@
                `((code_verifier . ,(pkce-verifier challenge)))))))
 
 (define (fetch-token/implicit client scopes #:state [state #f] #:audience [audience #f])
-  ;; See <https://tools.ietf.org/html/rfc6749> section 4.2.1
   #f)
 
 (define (fetch-token/with-password client username password)
-  ;; See <https://tools.ietf.org/html/rfc6749> section 4.3.2
   (log-oauth2-info "fetch-token/with-password, service ~a, username ~a" (client-service-name client) username)
   (fetch-token-common
    client
@@ -164,7 +154,6 @@
                  (cons 'client_id (client-id client))))))
 
 (define (fetch-token/with-client client)
-  ;; See <https://tools.ietf.org/html/rfc6749> section 4.4.2
   (log-oauth2-info "fetch-token/with-client, service ~a" (client-service-name client))
   (fetch-token-common
    client
@@ -173,7 +162,6 @@
                  (cons 'client_secret (client-secret client))))))
 
 (define (refresh-token client token)
-  ;; See <https://tools.ietf.org/html/rfc6749> section 6
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
   (define response 
     (fetch-token-common
@@ -185,7 +173,6 @@
   (log-oauth2-debug "refres-token, response: ~a" response))
 
 (define (revoke-token client token revoke-type)
-  ;; See <https://tools.ietf.org/html/rfc7009> section 2.1
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
   (fetch-token-common
    client
@@ -199,7 +186,6 @@
                          [else (error "unknown token type: " revoke-type)]))))))
 
 (define (introspect-token client token token-type)
-  ;; See <https://tools.ietf.org/html/rfc7662> section 2.1
   ;; Note:
   ;; The Authorization header must be set to Bearer followed by a space,
   ;; and then a valid access token used for making the Introspect request.

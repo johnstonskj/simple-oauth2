@@ -10,10 +10,12 @@
 (require racket/contract)
 
 (provide (except-out (struct-out client) make-client)
-         (struct-out token)
          (rename-out [create-client make-client])
+         (struct-out token)
+
          (struct-out exn:fail:http)
          make-exn:fail:http
+         
          (struct-out exn:fail:oauth2)
          make-exn:fail:oauth2
          exn:fail:oauth2-error-description)
@@ -60,7 +62,7 @@
    type
    refresh-token
    audience
-   scope
+   scopes
    expires) #:prefab)
 
 (struct exn:fail:http exn:fail
