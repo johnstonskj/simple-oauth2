@@ -4,16 +4,13 @@
 ;;   Simple OAuth2 client and server implementation
 ;;
 ;; Copyright (c) 2019 Simon Johnston (johnstonskj@gmail.com).
-
-; This implementation references the following specifications:
-;
-; The OAuth 2.0 Authorization Framework <https://tools.ietf.org/html/rfc6749>
-;
-; Proof Key for Code Exchange (PKCE) by OAuth Public Clients <https://tools.ietf.org/html/rfc7636>
-;
-; OAuth 2.0 Token Revocation <https://tools.ietf.org/html/rfc7009>
-;
-; OAuth 2.0 Token Introspection <https://tools.ietf.org/html/rfc7662>
+;;
+;; This implementation references the following specifications:
+;;
+;; * The OAuth 2.0 Authorization Framework <https://tools.ietf.org/html/rfc6749>
+;; * Proof Key for Code Exchange (PKCE) by OAuth Public Clients <https://tools.ietf.org/html/rfc7636>
+;; * OAuth 2.0 Token Revocation <https://tools.ietf.org/html/rfc7009>
+;; * OAuth 2.0 Token Introspection <https://tools.ietf.org/html/rfc7662>
 
 (provide create-random-state
          create-pkce-challenge
@@ -21,10 +18,10 @@
          request-authorization-code
          authorization-complete
          
-         fetch-token/from-code
-         fetch-token/implicit
-         fetch-token/with-password
-         fetch-token/with-client
+         grant-token/from-authorization-code
+         grant-token/implicit
+         grant-token/from-owner-credentials
+         grant-token/from-client-credentials
          refresh-token
          revoke-token
          introspect-token
@@ -50,6 +47,7 @@
          net/url
          net/url-string
          oauth2
+         oauth2/private/http
          oauth2/private/logging
          oauth2/private/privacy)
 
@@ -60,10 +58,6 @@
    shutdown-redirect-server)])
 
 ;; ---------- Internal types
-
-(define APPLICATION/JSON "application/json")
-
-(define APPLICATION/FORM-MIME-TYPE "application/x-www-form-urlencoded")
 
 (define-struct pkce
   (verifier
@@ -129,8 +123,8 @@
 (define (authorization-complete)
   (shutdown-redirect-server))
 
-(define (fetch-token/from-code client authorization-code #:challenge [challenge #f])
-  (log-oauth2-info "fetch-token/from-code, service ~a, code ~a" (client-service-name client) authorization-code)
+(define (grant-token/from-authorization-code client authorization-code #:challenge [challenge #f])
+  (log-oauth2-info "grant-token/from-authorization-code, service ~a, code ~a" (client-service-name client) authorization-code)
   (fetch-token-common
    client
    (append `((grant_type . "authorization_code")
@@ -141,11 +135,11 @@
                '()
                `((code_verifier . ,(pkce-verifier challenge)))))))
 
-(define (fetch-token/implicit client scopes #:state [state #f] #:audience [audience #f])
+(define (grant-token/implicit client scopes #:state [state #f] #:audience [audience #f])
   #f)
 
-(define (fetch-token/with-password client username password)
-  (log-oauth2-info "fetch-token/with-password, service ~a, username ~a" (client-service-name client) username)
+(define (grant-token/from-owner-credentials client username password)
+  (log-oauth2-info "grant-token/from-owner-credentials, service ~a, username ~a" (client-service-name client) username)
   (fetch-token-common
    client
    (append (list (cons 'grant-type "password")
@@ -153,8 +147,8 @@
                  (cons 'password password)
                  (cons 'client_id (client-id client))))))
 
-(define (fetch-token/with-client client)
-  (log-oauth2-info "fetch-token/with-client, service ~a" (client-service-name client))
+(define (grant-token/from-client-credentials client)
+  (log-oauth2-info "grant-token/from-client-credentials, service ~a" (client-service-name client))
   (fetch-token-common
    client
    (append (list (cons 'grant_type "password")
@@ -170,7 +164,7 @@
                    (cons 'refresh_token (token-refresh-token token))
                    (cons 'client_id (client-id client))
                    (cons 'client_secret (client-secret client))))))
-  (log-oauth2-debug "refres-token, response: ~a" response))
+  (log-oauth2-debug "refresh-token, response: ~a" response))
 
 (define (revoke-token client token revoke-type)
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
@@ -202,19 +196,21 @@
                          [else (error "unknown token type: " token-type)]))))))
 
 (define (make-authorization-header token)
-  (string->bytes/utf-8 (format "Authorization: ~a ~a" (token-type token) (token-access-token token))))
+  (string->bytes/utf-8 (format "~a: ~a ~a" (header-name 'authorization) (token-type token) (token-access-token token))))
 
 ;; ---------- Internal Implementation
 
+(define empty-string "")
+
 (define (fetch-token-common client data-list)
-  (define header (format "Authorization: Basic ~a" (string-trim (bytes->string/latin-1 (encode-client client)))))
+  (define header (format "~a: Basic ~a" (header-name 'authorization) (string-trim (bytes->string/latin-1 (encode-client client)))))
   (define response
     (do-post/form-encoded-list/json
      (string->url (client-token-uri client))
      (list header)
      data-list))
   (cond
-    [(= (first response) 200)
+    [(= (first response) (error-code 'ok))
      (token-from-response (last response))]
     [else
      (response)]))
@@ -225,7 +221,7 @@
      uri
      headers
      (alist->form-urlencoded data-list)
-     "application/x-www-form-urlencoded"))
+     (media-type 'form-urlencoded)))
   (list-update response 3 bytes->jsexpr))
 
 (define (do-post/form-encoded-list uri headers data-list)
@@ -233,7 +229,7 @@
    uri
    headers
    (alist->form-urlencoded data-list)
-   "application/x-www-form-urlencoded"))
+   (media-type 'form-urlencoded)))
 
 (define (do-post uri request-headers data data-type)
   (log-oauth2-debug "(http-sendrecv")
@@ -241,7 +237,7 @@
   (log-oauth2-debug "  ~s" uri)
   (log-oauth2-debug "  #:port ~s" (url-port uri))
   (log-oauth2-debug "  #:ssl? ~s ; ~s" (equal? (url-scheme uri) "https") (url-scheme uri))
-  (log-oauth2-debug "  #:headers ~s" (cons (format "Content-Type: ~a" data-type) request-headers))
+  (log-oauth2-debug "  #:headers ~s" (cons (format "~a: ~a" (header-name 'content-type) data-type) request-headers))
   (log-oauth2-debug "  #:data ~s)" data)
   (define-values
     (status response-headers in-port)
@@ -251,7 +247,7 @@
      ;      #:port (false? (url-port uri)
      #:ssl? (equal? (url-scheme uri) "https")
      #:method "POST"
-     #:headers (cons (format "Content-Type: ~a" data-type) request-headers)
+     #:headers (cons (format "~a: ~a" (header-name 'content-type) data-type) request-headers)
      #:data data))
   (log-oauth2-debug "(values ~s ~s #port)" status response-headers)
   (parse-response status response-headers in-port))
@@ -261,7 +257,7 @@
     (for/or ([char (string->list str)] [i (range (string-length str))])
       (if (equal? char sep) i #f)))
   (if (false? index)
-      (values str "")
+      (values str empty-string)
       (values (substring str 0 index) (string-trim (substring str index)))))
 
 (define (parse-response status headers in-port)
@@ -276,32 +272,32 @@
         (define-values (k v) (string-split-first (bytes->string/utf-8 header) #\:))
         (cons k (string-trim (substring v 1)))))
      (port->bytes in-port)))
-  (when (<= 400 (first response) 599)
+  (when (<= (error-code 'bad-request) (first response) (error-code 'last-error))
     (log-oauth2-error "error response, code ~a, body ~a" (first response) (fourth response))
-    (define content-type (hash-ref (third response) "Content-Type"))
+    (define content-type (hash-ref (third response) (header-name 'content-type)))
     (cond
-      [(string-prefix? content-type APPLICATION/JSON)
+      [(string-prefix? content-type (media-type 'json))
        (define json-body (bytes->jsexpr (fourth response)))
        (cond
          [(hash-has-key? json-body 'error)
           (raise (make-exn:fail:oauth2 (hash-ref json-body 'error 'unknown)
-                                       (hash-ref json-body 'error_description "")
-                                       (hash-ref json-body 'error_uri "")
-                                       (hash-ref json-body 'state "")
+                                       (hash-ref json-body 'error_description empty-string)
+                                       (hash-ref json-body 'error_uri empty-string)
+                                       (hash-ref json-body 'state empty-string)
                                        (current-continuation-marks)))]
          [(hash-has-key? json-body 'errors)
           ;; Note, this is a Fitbit specific deviation from the standard!
           (define json-error (first (hash-ref json-body 'errors '())))
           (raise (make-exn:fail:oauth2 (hash-ref json-error 'errorType 'unknown)
-                                       (hash-ref json-error 'message "")
-                                       ""
-                                       ""
+                                       (hash-ref json-error 'message empty-string)
+                                       empty-string
+                                       empty-string
                                        (current-continuation-marks)))]
          [else             
           (raise (make-exn:fail:oauth2 'unknown
                                        (fourth response)
-                                       ""
-                                       ""
+                                       empty-string
+                                       empty-string
                                        (current-continuation-marks)))])]
       [else
        (raise (apply make-exn:fail:http response))]))
@@ -314,5 +310,5 @@
    (hash-ref json 'token_type)
    (hash-ref json 'refresh_token #f)
    (hash-ref json 'audience #f)
-   (string-split (hash-ref json 'scope "") ",")
+   (string-split (hash-ref json 'scope empty-string) ",")
    (+ (current-seconds) (hash-ref json 'expires_in "0"))))

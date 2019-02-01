@@ -16,9 +16,11 @@
          racket/os
          web-server/servlet
          web-server/servlet-env
+         dali
          oauth2
          oauth2/storage/config
          oauth2/private/external-ip
+         oauth2/private/http
          oauth2/private/logging)
 
 ;; ---------- Implementation
@@ -115,9 +117,49 @@
       #:log-file (current-output-port)
       #:log-format 'apache-default)]))
 
-; ?code=AUTH_CODE_HERE&state=1234zyx
+(define success-template
+  (compile-string
+   (string-append "<html>"
+                  "<head><title>OAuth Authentication Result</title></head?"
+                  "<body><h1>Authentication Succeeded</h1>"
+                  "<p>Authentication code: {{code}} (for application state {{state}})</p>"
+                  "<div hidden>"
+                  "</div>"
+                  "</body></html")))
+
+(define failure-template
+  (compile-string
+   (string-append "<html>"
+                  "<head><title>OAuth Authentication Result</title></head?"
+                  "<body><h1>Authentication Failed/h1>"
+                  "<p>Error: {{#code}}{{_}}{{/code}} {{#state}}"
+                  "(for application state {{_}}){{/state}}"
+                  "{{#error_description}}</br>{{_}}{{/error_description}}"
+                  "{{#error_uri}}</br><a href=\"{{_}}\">More details.</a>{{/error_uri}}"
+                  "</p>"
+                  "<div hidden>"
+                  "</div>"
+                  "</body></html")))
+
+(define error-template
+  (compile-string
+   (string-append "<html>"
+                  "<head><title>OAuth Authentication Result</title></head?"
+                  "<body><h1>Unknown Error</h1>"
+                  "<p>No more information available</p>"
+                  "<div hidden>"
+                  "</div>"
+                  "</body></html")))
+
+(define (response-content template context)
+  (define out (open-output-string))
+  (template context out)
+  (list (string->bytes/utf-8 (get-output-string out))))
+
+(define response-type
+  (string->bytes/utf-8 (make-header-string 'content-type (media-type 'html) (hash 'charset 'utf-8))))
+   
 (define (auth-response-servlet req)
-  ;  (define path (path/param-path (car (url-path (request-uri req)))))
   (define params (make-hash (request-bindings req)))
   (cond
     [(and (hash-has-key? params 'state)
@@ -125,19 +167,16 @@
      (define state (hash-ref params 'state))
      (define code (hash-ref params 'code))
      (channel-put request-channel (make-auth-response state code))
-     (log-oauth2-info "received a code ~a for state ~a" code state)
+     (log-oauth2-info "received an authentication code ~a, for state ~a" code state)
      (response/full
-      200
-      #"OK"
+      (error-code 'ok)
+      (error-message/bytes 'ok)
       (current-seconds)
-      TEXT/HTML-MIME-TYPE
+      response-type
       (list)
-      (list #"<html><body><p>"
-            #"Authenticated, code: "
-            (string->bytes/utf-8 code)
-            #"</p></body></html>"))]
+      (response-content success-template params))]
     [(hash-has-key? params 'error)
-     (log-oauth2-error "received ~a from auth server for state ~a"
+     (log-oauth2-error "received error ~a from auth server, for state ~a"
                        (hash-ref params 'error)
                        (hash-ref params 'state ""))
      (channel-put request-channel
@@ -147,38 +186,27 @@
                                         (hash-ref params 'state)
                                         (current-continuation-marks)))
      (response/full
-      200
-      #"OK-ish"
+      (error-code 'ok)
+      (error-message/bytes 'ok)
       (current-seconds)
-      TEXT/HTML-MIME-TYPE
-      (list)
-      (list #"<html><body><p>"
-            #"Error "
-            (hash-ref params 'error "")
-            #" (for state: "
-            (hash-ref params 'state "")
-            #")</br>"
-            (hash-ref params 'error_description "")
-            #"</br> For more information, see "
-            (hash-ref params 'error_uri "")
-            #"</p></body></html>"))]
+      response-type
+      '()
+      (response-content failure-template params))]
     [else
      (log-oauth2-error "received an unknown error from auth server: ~a" params)
      (channel-put request-channel
-                  (make-exn:fail:http 500
-                                      "UNKNOWN ERROR"
+                  (make-exn:fail:http 'server-error
+                                      'server-error
                                       params
                                       ""
                                       (current-continuation-marks)))
      (response/full
-      500
-      #"SERVER ERROR"
+      (error-code 'server-error)
+      (error-message/bytes 'server-error)
       (current-seconds)
-      TEXT/HTML-MIME-TYPE
-      (list)
-      (list #"<html><body><p>"
-            #"An error occurred :( "
-            #"</p></body></html>"))]))
+      response-type
+      '()
+      (response-content error-template params))]))
 
 (define-struct server-config
   (host

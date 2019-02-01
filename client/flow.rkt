@@ -40,7 +40,7 @@
     (raise authorization-code))
 
   (define token-response
-    (fetch-token/from-code
+    (grant-token/from-authorization-code
      client 
      authorization-code
      #:challenge challenge))

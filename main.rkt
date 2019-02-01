@@ -24,7 +24,8 @@
 
 (require racket/bool
          racket/string
-         net/url)
+         net/url
+         oauth2/private/http)
 
 ;; ---------- Implementation
 
@@ -71,7 +72,12 @@
    body) #:transparent)
 
 (define (make-exn:fail:http code message headers body continuations)
-  (exn:fail:http message continuations code headers body))
+  (exn:fail:http
+   (if (symbol? message) (error-message message) message)
+   continuations
+   (if (symbol? code) (error-code code) code)
+   headers
+   body))
 
 (struct exn:fail:oauth2 exn:fail
   (error

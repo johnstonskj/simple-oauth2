@@ -16,6 +16,7 @@
     "web-server-lib"
     "crypto-lib"
     "net-jwt"
+    "dali"
     "rackunit-lib"
     "racket-index"))
 (define build-deps

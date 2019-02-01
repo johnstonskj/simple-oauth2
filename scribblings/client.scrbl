@@ -57,6 +57,15 @@ a higher-level module that implements end-to-end @italic{flows}.
           [#:challenge challenge #f]
           [#:audience audience #f])
          channel?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[scopes] - }
+  @item{@racket[state] - }
+  @item{@racket[challenge] - }
+  @item{@racket[audience] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1"]{The OAuth 2.0 Authorization
   Framework}, section 4.1 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.3"]{Proof
   Key for Code Exchange (PKCE) by OAuth Public Clients}, section 4.3.
@@ -69,38 +78,65 @@ TBD
 
 @subsection{Authorization Token Management}
 
-@defproc[(fetch-token/from-code
+@defproc[(grant-token/from-authorization-code
           [client client?]
           [authorization-code string?]
           [#:challenge challenge #f])
          token?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[authorization-code] - }
+  @item{@racket[challenge] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1.3"]{The OAuth 2.0 Authorization
   Framework}, section 4.1.3 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.5"]{Proof
   Key for Code Exchange (PKCE) by OAuth Public Clients}, section 4.5.
 }
 
-@defproc[(fetch-token/implicit
+@defproc[(grant-token/implicit
           [client client?]
           [scopes (listof string?)]
           [#:state state #f]
           [#:audience audience #f])
          token?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[scopes] - }
+  @item{@racket[state] - }
+  @item{@racket[audience] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.2.1"]{The OAuth 2.0 Authorization
   Framework}, section 4.2.1.
 }
 
-@defproc[(fetch-token/with-password
+@defproc[(grant-token/from-owner-credentials
           [client client?]
           [username string?]
           [password string?])
          token?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[username] - }
+  @item{@racket[password] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.3.2"]{The OAuth 2.0 Authorization
   Framework}, section 4.3.2.
 }
 
-@defproc[(fetch-token/with-client
+@defproc[(grant-token/from-client-credentials
           [client client?])
          token?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.4.2"]{The OAuth 2.0 Authorization
   Framework}, section 4.4.2.
 }
@@ -109,6 +145,12 @@ See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.4.2"]{The OAuth 2.
           [client client?]
           [token token?])
          token?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[token] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-6"]{The OAuth 2.0 Authorization
   Framework}, section 6.
 }
@@ -118,6 +160,13 @@ See @hyperlink["https://tools.ietf.org/html/rfc6749#section-6"]{The OAuth 2.0 Au
           [token token?]
           [revoke-type string?])
          void?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[token] - }
+  @item{@racket[revoke-type] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc7009#section-2.1"]{OAuth 2.0 Token Revocation},
   section 2.1.
 }
@@ -127,6 +176,13 @@ See @hyperlink["https://tools.ietf.org/html/rfc7009#section-2.1"]{OAuth 2.0 Toke
           [token token?]
           [token-type symbol?])
          hash?]{
+TBD
+
+@itemlist[
+  @item{@racket[client] - }
+  @item{@racket[token] - }
+  @item{@racket[token-type] - }]
+                   
 See @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Token Introspection},
   section 2.1.
 }
@@ -136,13 +192,19 @@ See @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Toke
 @defproc[(create-random-state
           [bytes integer? 16])
          string?]{
-TBD
+Create a random string that can be used as the @racket[state] parameter in authorization requests.
+The random bytes are formatted as a byte string and safe for URL encoding.
 }
 
 @defproc[(create-pkce-challenge
           [a-verifier bytes? #f])
          pkce?]{
-See @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.1"]{Proof Key for Code Exchange (PKCE)
+Create a structure that represents the components of a @italic{Proof Key for Code Exchange (PKCE)}
+challenge. The @racket[a-verifier] value can be used as the seed string, if not specified a random
+byte string is generated.
+
+The following is the specified challenge construction approach from 
+  @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.1"]{Proof Key for Code Exchange (PKCE)
   by OAuth Public Clients}, section 4.1.
 
 @verbatim|{
@@ -156,13 +218,14 @@ DIGIT          = %x30-39}|
 @defproc[(make-authorization-header
           [token token?])
          bytes?]{
-TBD
+Create a valid HTTP authorization header, as a byte string, from the provided @racket[token] value.
 }
 
 @defproc[#:kind "predicate" (pkce?
           [v any/c])
          boolean?]{
-TBD
+Returns @racket[#t] if the value @racket[v] is a PKCE structure (created by
+  @racket[create-pkce-challenge]).
 }
 
 @;{============================================================================}
