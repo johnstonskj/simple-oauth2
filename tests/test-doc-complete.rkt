@@ -36,4 +36,5 @@
 (test-doc-coverage
  '(oauth2
    oauth2/client
+   oauth2/storage/config
    ))

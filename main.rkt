@@ -7,9 +7,12 @@
 
 ;; Racket Style Guide: http://docs.racket-lang.org/style/index.html
 
-(require racket/contract)
+(require oauth2/private/logging)
 
-(provide (except-out (struct-out client) make-client)
+(provide OAUTH-SPEC-VERSION
+         OAUTH-RFC
+         OAUTH-DISPLAY-NAME
+         (except-out (struct-out client) make-client)
          (rename-out [create-client make-client])
          (struct-out token)
 
@@ -18,7 +21,9 @@
          
          (struct-out exn:fail:oauth2)
          make-exn:fail:oauth2
-         exn:fail:oauth2-error-description)
+         exn:fail:oauth2-error-description
+
+         (all-from-out oauth2/private/logging))
 
 ;; ---------- Requirements
 
@@ -28,6 +33,12 @@
          oauth2/private/http)
 
 ;; ---------- Implementation
+
+(define OAUTH-SPEC-VERSION 2.0)
+
+(define OAUTH-RFC 6749)
+
+(define OAUTH-DISPLAY-NAME (format "OAuth ~a (RFC~a)" OAUTH-SPEC-VERSION OAUTH-RFC))
 
 ; Note, we use #:prefab to allow these to be serialized using read/write.
 

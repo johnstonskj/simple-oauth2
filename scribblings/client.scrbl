@@ -190,7 +190,7 @@ See @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Toke
 @subsection{Helper Functions}
 
 @defproc[(create-random-state
-          [bytes integer? 16])
+          [bytes exact-positive-integer? 16])
          string?]{
 Create a random string that can be used as the @racket[state] parameter in authorization requests.
 The random bytes are formatted as a byte string and safe for URL encoding.

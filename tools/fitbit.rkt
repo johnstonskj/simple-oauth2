@@ -17,9 +17,7 @@
          oauth2
          oauth2/client/flow
          oauth2/storage/clients
-         oauth2/storage/tokens
-         oauth2/private/redirect-server
-         oauth2/private/logging)
+         oauth2/storage/tokens)
 
 ;; ---------- Implementation
 

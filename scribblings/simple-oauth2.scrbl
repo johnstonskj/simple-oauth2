@@ -16,6 +16,7 @@ This package provides an implementation of a full client (both flow-based and
 @itemlist[
   @item{@hyperlink["https://tools.ietf.org/html/rfc6749"]{The OAuth 2.0 Authorization Framework},
   which implies @hyperlink["https://tools.ietf.org/html/rfc6750"]{The OAuth 2.0 Authorization Framework: Bearer Token Usage}}
+  @item{@hyperlink["https://tools.ietf.org/html/rfc8252"]{OAuth 2.0 for Native Apps}}
   @item{@hyperlink["https://tools.ietf.org/html/rfc7636"]{Proof Key for Code Exchange (PKCE) by OAuth Public Clients}}
   @item{@hyperlink["https://tools.ietf.org/html/rfc7009"]{OAuth 2.0 Token Revocation}}
   @item{@hyperlink["https://tools.ietf.org/html/rfc7662"]{OAuth 2.0 Token Introspection}}

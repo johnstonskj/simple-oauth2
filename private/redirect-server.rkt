@@ -157,7 +157,13 @@
   (list (string->bytes/utf-8 (get-output-string out))))
 
 (define response-type
-  (string->bytes/utf-8 (make-header-string 'content-type (media-type 'html) (hash 'charset 'utf-8))))
+  (make-media-type 'text 'html (hash 'charset 'utf-8)))
+
+(define response-language
+  (make-header #"Content-Language" "en"))
+
+(define response-no-cache
+  (make-header #"Cache-Control" #"no-cache, no-store, must-revalidate"))
    
 (define (auth-response-servlet req)
   (define params (make-hash (request-bindings req)))
@@ -173,7 +179,7 @@
       (error-message/bytes 'ok)
       (current-seconds)
       response-type
-      (list)
+      (list response-language response-no-cache)
       (response-content success-template params))]
     [(hash-has-key? params 'error)
      (log-oauth2-error "received error ~a from auth server, for state ~a"
@@ -190,7 +196,7 @@
       (error-message/bytes 'ok)
       (current-seconds)
       response-type
-      '()
+      (list response-language response-no-cache)
       (response-content failure-template params))]
     [else
      (log-oauth2-error "received an unknown error from auth server: ~a" params)
@@ -205,7 +211,7 @@
       (error-message/bytes 'server-error)
       (current-seconds)
       response-type
-      '()
+      (list response-language response-no-cache)
       (response-content error-template params))]))
 
 (define-struct server-config

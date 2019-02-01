@@ -9,32 +9,53 @@
 
 ;; ---------- Requirements
 
-(require racket/string)
+(require racket/set
+         racket/string)
 
 ;; ---------- Implementation
 
+(define (method-name sym)
+  (cond
+    [(set-member? (set 'get 'head 'put 'post 'delete 'options) sym)
+     (string-upcase (symbol->string sym))]
+    [else #f]))
+  
 (define (header-name sym)
   (cond
-    [(equal? sym 'authorization) "Authorization"]
-    [(equal? sym 'content-type) "Content-Type"]
+    [(set-member? (set 'authorization 'content-language 'content-type) sym)
+     (string-titlecase (symbol->string sym))]
     [else #f]))
 
 (define (make-header-parameter sym value)
   (format "; ~a=~a" sym value))
 
+(define (make-header-parameters parameter-hash)
+  (string-join
+   (hash-map parameter-hash (λ (k v) (make-header-parameter k v)))
+   ""))
+
 (define (make-header-string sym value [parameters (hash)])
   (format "~a: ~a~a"
           (header-name sym)
           value
-          (string-join
-           (hash-map parameters (λ (k v) (make-header-parameter k v)))
-           "")))
+          (make-header-parameters parameters)))
 
+(define (make-media-type major minor [parameters (hash)])
+  (format "~a/~a~a"
+          major
+          minor
+          (make-header-parameters parameters)))
+          
 (define (media-type sym)
   (cond
-    [(equal? sym 'html) "text/html"]
-    [(equal? sym 'json) "application/json"]
-    [(equal? sym 'form-urlencoded) "application/x-www-form-urlencoded"]
+    [(set-member? (set 'css 'html 'xml 'plain 'csv) sym)
+     (make-media-type 'text sym)]
+    [(set-member? (set 'javascript 'json 'zip 'pdf 'sql 'graphql) sym)
+     (make-media-type 'application sym)]
+    [(equal? sym 'form-urlencoded)
+     (make-media-type 'application 'x-www-form-urlencoded)]
+    [(set-member? (set 'png 'jpeg 'gif 'tiff 'svg) sym)
+     (make-media-type 'image sym)]
     [else #f]))
 
 (define (error-code sym)
