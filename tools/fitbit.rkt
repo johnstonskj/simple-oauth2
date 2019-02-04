@@ -15,6 +15,7 @@
          racket/string
          json
          oauth2
+         oauth2/client
          oauth2/client/flow
          oauth2/storage/clients
          oauth2/storage/config
@@ -58,7 +59,7 @@
        (perform-authentication maybe-client)]
       [else
        (displayln "Authentication token already stored.")
-       (perform-api-command)]))
+       (perform-api-command maybe-client)]))
 
   (with-logging-to-port
       (current-output-port)
@@ -89,7 +90,7 @@
      #:args (scope . scopes)
      (cons scope scopes)))
 
-  (lambda ()
+  (λ ()
     (cond
       [(or (false? (c-user))
            (false? (c-client-id))
@@ -135,7 +136,11 @@
 
          (displayln (format "Fitbit returned authenication token: ~a" token)))])))
 
-(define (perform-api-command)
+(define (make-query-call client token params)
+  #t)
+
+
+(define (perform-api-command client)
   (command-line
    #:program COMMAND
    ;; ---------- Common commands
@@ -147,4 +152,7 @@
    ;; ---------- API access commands
    #:once-each
    [("-o" "--output-file") path "Output file"
-                           (c-output-file path)]))
+                           (c-output-file path)])
+  (λ ()
+    (define the-token (check-token-refresh client (get-current-user-name)))
+    (make-query-call client the-token (hash))))

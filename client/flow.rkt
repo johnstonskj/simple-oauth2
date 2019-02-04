@@ -8,7 +8,8 @@
 (provide initiate-code-flow
          initiate-implicit-flow
          initiate-application-flow
-         initiate-password-flow)
+         initiate-password-flow
+         check-token-refresh)
 
 ;; ---------- Requirements
 
@@ -62,6 +63,17 @@
 (define (initiate-application-flow) #f)
 
 (define (initiate-password-flow) #f)
+
+(define (check-token-refresh client user-name)
+  (define stored-token (get-token user-name (client-service-name client)))
+  (cond
+    [(> (current-seconds) (token-expires stored-token))
+     (define new-token (refresh-token client stored-token))
+     (set-token! user-name (client-service-name client) new-token)
+     (save-tokens)
+     new-token]
+    [else
+     stored-token]))
 
 ;; ---------- Internal Procedures
 

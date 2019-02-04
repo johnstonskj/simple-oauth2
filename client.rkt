@@ -82,7 +82,8 @@
   ; only support 'S256' option, no need for 'plain'
   (make-pkce verifier challenge "S256"))
 
-(define (request-authorization-code client scopes #:state [state #f] #:challenge [challenge #f] #:audience [audience #f])
+(define (request-authorization-code
+         client scopes #:state [state #f] #:challenge [challenge #f] #:audience [audience #f])
   (log-oauth2-info "request-authorization-code from ~a" (client-service-name client))
   (define use-state (if (false? state) (create-random-state) state))
   (define query (append `((response_type . "code")
@@ -124,7 +125,8 @@
   (shutdown-redirect-server))
 
 (define (grant-token/from-authorization-code client authorization-code #:challenge [challenge #f])
-  (log-oauth2-info "grant-token/from-authorization-code, service ~a, code ~a" (client-service-name client) authorization-code)
+  (log-oauth2-info "grant-token/from-authorization-code, service ~a, code ~a"
+                   (client-service-name client) authorization-code)
   (fetch-token-common
    client
    (append `((grant_type . "authorization_code")
@@ -139,7 +141,8 @@
   #f)
 
 (define (grant-token/from-owner-credentials client username password)
-  (log-oauth2-info "grant-token/from-owner-credentials, service ~a, username ~a" (client-service-name client) username)
+  (log-oauth2-info "grant-token/from-owner-credentials, service ~a, username ~a"
+                   (client-service-name client) username)
   (fetch-token-common
    client
    (append (list (cons 'grant-type "password")
@@ -148,7 +151,8 @@
                  (cons 'client_id (client-id client))))))
 
 (define (grant-token/from-client-credentials client)
-  (log-oauth2-info "grant-token/from-client-credentials, service ~a" (client-service-name client))
+  (log-oauth2-info "grant-token/from-client-credentials, service ~a"
+                   (client-service-name client))
   (fetch-token-common
    client
    (append (list (cons 'grant_type "password")
@@ -157,14 +161,12 @@
 
 (define (refresh-token client token)
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
-  (define response 
-    (fetch-token-common
-     client
-     (append (list (cons 'grant_type "refresh_token")
-                   (cons 'refresh_token (token-refresh-token token))
-                   (cons 'client_id (client-id client))
-                   (cons 'client_secret (client-secret client))))))
-  (log-oauth2-debug "refresh-token, response: ~a" response))
+  (fetch-token-common
+   client
+   (append (list (cons 'grant_type "refresh_token")
+                 (cons 'refresh_token (token-refresh-token token))
+                 (cons 'client_id (client-id client))
+                 (cons 'client_secret (client-secret client))))))
 
 (define (revoke-token client token revoke-type)
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
@@ -196,7 +198,10 @@
                          [else (error "unknown token type: " token-type)]))))))
 
 (define (make-authorization-header token)
-  (string->bytes/utf-8 (format "~a: ~a ~a" (header-name 'authorization) (token-type token) (token-access-token token))))
+  (string->bytes/utf-8 (format "~a: ~a ~a"
+                               (header-name 'authorization)
+                               (token-type token)
+                               (token-access-token token))))
 
 ;; ---------- Internal Implementation
 
