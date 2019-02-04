@@ -17,6 +17,7 @@
          oauth2
          oauth2/client/flow
          oauth2/storage/clients
+         oauth2/storage/config
          oauth2/storage/tokens)
 
 ;; ---------- Implementation
@@ -38,7 +39,7 @@
 (define c-client-id (make-parameter #f))
 (define c-client-secret (make-parameter #f))
 (define c-auth-code (make-parameter #f))
-(define c-user (make-parameter current-default-user))
+(define c-user (make-parameter (get-current-user-name)))
 (define c-output-file (make-parameter #f))
 (define logging-level (make-parameter 'warning))
 

@@ -16,6 +16,7 @@
          oauth2
          oauth2/client
          oauth2/storage/clients
+         oauth2/storage/config
          oauth2/storage/tokens
          oauth2/private/logging)
 
@@ -48,7 +49,7 @@
 
   (set-token!
    (if (false? user-name)
-       current-default-user
+       (get-current-user-name)
        user-name)
    (client-service-name client)
    token-response)

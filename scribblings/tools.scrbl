@@ -14,9 +14,11 @@
 @;{============================================================================}
 @title[]{Example Command Line Tools}
 
-TBD
+The following are tools to access commonly-used services that are OAuth 2.0
+protected.
 
 @;{============================================================================}
 @section[]{Fitbit client}
 
-TBD
+This client implements simple queries against the
+@hyperlink["https://dev.fitbit.com/build/reference/web-api/"]{Fitbit API}.

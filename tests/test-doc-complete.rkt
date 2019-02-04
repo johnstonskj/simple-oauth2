@@ -37,4 +37,6 @@
  '(oauth2
    oauth2/client
    oauth2/storage/config
+   oauth2/storage/clients
+   oauth2/storage/tokens
    ))

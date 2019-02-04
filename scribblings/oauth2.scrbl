@@ -111,7 +111,8 @@ persistence of token details.
              [headers list?]
              [body bytes?])
             #:transparent]{
-TBD
+Raised on receipt of an HTTP error and contains the HTTP status code, any headers and body
+content from the response.
 }
 
 @defstruct[(exn:fail:oauth2 exn:fail)
@@ -119,11 +120,13 @@ TBD
              [error-uri (or/c string? #f)]
              [state (or/c string? #f)])
             #:transparent]{
-TBD
+Raised on receipt of an OAuth specific error (usually an error indicated by the redirect server)
+and contains values as specified in the OAuth specification.
 }
 
 @defproc[(exn:fail:oauth2-error-description
           [exn exn:fail:oauth2?])
          string?]{
-TBD
+Return the error description part of the exception (reusing @racket[message] from the
+standard @racket[exn:fail] exception).
 }

@@ -47,6 +47,10 @@ a higher-level module that implements end-to-end @italic{flows}.
 @section[]{Module oauth2/client.}
 @defmodule[oauth2/client]
 
+This module provides request-level procedures that match the sections of the
+OAuth specification. While each provides a reasonable interface abstraction
+there remains a 1:1 mapping from the procedures here and the specific HTTP requests
+described in the corresponding RFCs.
 
 @subsection{Authorization}
 
@@ -57,23 +61,46 @@ a higher-level module that implements end-to-end @italic{flows}.
           [#:challenge challenge #f]
           [#:audience audience #f])
          channel?]{
-TBD
+Given a client configuration, and a list of requested scopes, request an
+authorization code by having the user complete a manual authentication and
+authorization step via the URI in @racket[client-authorization-uri]. This is
+an asynchronous process directing the user to a web page provided by the
+service to authenticate the request. Upon success the users browser is
+redirected to a page hosted by this package (the @italic{redirect server}).
+To address this, the response from this procedure is a @racket[channel] which
+will be to communicate back to the caller the authorization code provided by
+the service via the redirect server.
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[scopes] - }
-  @item{@racket[state] - }
-  @item{@racket[challenge] - }
-  @item{@racket[audience] - }]
-                   
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[scopes] - a set of scopes to which we are requesting access.}
+  @item{@racket[state] - (optional) a state value, returned to the redirect
+  server for request/response correlation.}
+  @item{@racket[challenge] - (optional) a PKCE challenge structure, if @racket[#f]
+  PKCE @italic{will not} be used.}
+  @item{@racket[audience] - (optional) a non-standard value used by some services
+  to denote the API set to which access is requested. if @racket[#f]
+  this parameter @italic{will not} be sent.}]
+
+The value read from the response channel will either be a @racket[string?] code or
+an exception (@racket[exn:fail:http] or @racket[exn:fail:oauth2]). The authorization
+code read from the response channel may then be used in a call to
+@racket[grant-token/from-authorization-code] to retieve a token for this client.
+
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1"]{The OAuth 2.0 Authorization
-  Framework}, section 4.1 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.3"]{Proof
-  Key for Code Exchange (PKCE) by OAuth Public Clients}, section 4.3.
+  Framework}, §4.1 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.3"]{Proof
+  Key for Code Exchange (PKCE) by OAuth Public Clients}, §4.3.
 }
 
 @defproc[(authorization-complete)
          void?]{
-TBD
+The redirect server used in the retrieval of authorization codes utilizes a
+set of asynchronous resources including blocking threads. These resources
+are only started when a client calls @racket[request-authorization-code] for
+the first time but then they remain in place until the process is terminated
+or they are shut down explicitly. This procedure performs an orderly shut down
+of the redirect server.
 }
 
 @subsection{Authorization Token Management}
@@ -83,16 +110,19 @@ TBD
           [authorization-code string?]
           [#:challenge challenge #f])
          token?]{
-TBD
+Request the service grant an access token (and usually a refresh token also) given an
+authorization code previously provided by @racket[request-authorization-code]. 
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[authorization-code] - }
-  @item{@racket[challenge] - }]
+  @item{@racket[client] - the client configuration for the service granting
+  the token(s).}
+  @item{@racket[authorization-code] - a valid authorization code.}
+  @item{@racket[challenge] - (optional) a PKCE challenge structure, if @racket[#f]
+  PKCE @italic{will not} be used.}]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1.3"]{The OAuth 2.0 Authorization
-  Framework}, section 4.1.3 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.5"]{Proof
-  Key for Code Exchange (PKCE) by OAuth Public Clients}, section 4.5.
+  Framework}, §4.1.3 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.5"]{Proof
+  Key for Code Exchange (PKCE) by OAuth Public Clients}, §4.5.
 }
 
 @defproc[(grant-token/implicit
@@ -110,7 +140,7 @@ TBD
   @item{@racket[audience] - }]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.2.1"]{The OAuth 2.0 Authorization
-  Framework}, section 4.2.1.
+  Framework}, §4.2.1.
 }
 
 @defproc[(grant-token/from-owner-credentials
@@ -126,7 +156,7 @@ TBD
   @item{@racket[password] - }]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.3.2"]{The OAuth 2.0 Authorization
-  Framework}, section 4.3.2.
+  Framework}, §4.3.2.
 }
 
 @defproc[(grant-token/from-client-credentials
@@ -138,7 +168,7 @@ TBD
   @item{@racket[client] - }]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.4.2"]{The OAuth 2.0 Authorization
-  Framework}, section 4.4.2.
+  Framework}, §4.4.2.
 }
 
 @defproc[(refresh-token
@@ -152,7 +182,7 @@ TBD
   @item{@racket[token] - }]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc6749#section-6"]{The OAuth 2.0 Authorization
-  Framework}, section 6.
+  Framework}, §6.
 }
 
 @defproc[(revoke-token
@@ -168,7 +198,7 @@ TBD
   @item{@racket[revoke-type] - }]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc7009#section-2.1"]{OAuth 2.0 Token Revocation},
-  section 2.1.
+  §2.1.
 }
 
 @defproc[(introspect-token
@@ -184,7 +214,7 @@ TBD
   @item{@racket[token-type] - }]
                    
 See @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Token Introspection},
-  section 2.1.
+  §2.1.
 }
 
 @subsection{Helper Functions}
@@ -205,7 +235,7 @@ byte string is generated.
 
 The following is the specified challenge construction approach from 
   @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.1"]{Proof Key for Code Exchange (PKCE)
-  by OAuth Public Clients}, section 4.1.
+  by OAuth Public Clients}, §4.1.
 
 @verbatim|{
 code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
@@ -241,4 +271,20 @@ Returns @racket[#t] if the value @racket[v] is a PKCE structure (created by
           [#:audience audience string? #f])
          token?]{
 TBD
+
+@itemlist[
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[scopes] - a set of scopes to which we are requesting access.}
+  @item{@racket[state] - (optional) a state value, returned to the redirect
+  server for request/response correlation.}
+  @item{@racket[user-name] - (optional) the user name to record the token under; if
+  @racket[#f] then the value of @racket[get-current-user-name] will be used.}
+  @item{@racket[challenge] - (optional) a PKCE challenge structure, if @racket[#f]
+  PKCE @italic{will not} be used.}
+  @item{@racket[audience] - (optional) a non-standard value used by some services
+  to denote the API set to which access is requested. if @racket[#f]
+  this parameter @italic{will not} be sent.}]
+
+
 }
