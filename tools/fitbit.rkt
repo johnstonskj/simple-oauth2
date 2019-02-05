@@ -1,11 +1,9 @@
 #lang racket/base
 ;;
-;; simple-oauth2 - simple-oauth2.
+;; simple-oauth2 - oauth2/tools/fitbit.
 ;;   Simple OAuth2 client and server implementation
 ;;
 ;; Copyright (c) 2019 Simon Johnston (johnstonskj@gmail.com).
-
-;; Racket Style Guide: http://docs.racket-lang.org/style/index.html
 
 ;; ---------- Requirements
 
@@ -22,7 +20,8 @@
          oauth2/client/flow
          oauth2/storage/clients
          oauth2/storage/config
-         oauth2/storage/tokens)
+         oauth2/storage/tokens
+         oauth2/tools/common)
 
 ;; ---------- Implementation
 
@@ -40,11 +39,6 @@
    #:revoke "https://api.fitbit.com/oauth2/revoke"
    #:introspect "https://api.fitbit.com/1.1/oauth2/introspect"))
 
-(define c-client-id (make-parameter #f))
-(define c-client-secret (make-parameter #f))
-(define c-auth-code (make-parameter #f))
-(define c-user (make-parameter (get-current-user-name)))
-(define c-output-file (make-parameter #f))
 (define logging-level (make-parameter 'warning))
 
 (module+ main
@@ -56,10 +50,10 @@
       [(or (false? maybe-client)
            (false? (client-id maybe-client)))
        (displayln "No client credentials stored, please authenticate.")
-       (perform-authentication maybe-client)]
-      [(false? (get-token (c-user) FITBIT-SERVICE-NAME))
+       (perform-authentication COMMAND maybe-client fitbit-client logging-level)]
+      [(false? (get-token (get-current-user-name) FITBIT-SERVICE-NAME))
        (displayln "No authentication code stored, please authenticate.")
-       (perform-authentication maybe-client)]
+       (perform-authentication COMMAND maybe-client fitbit-client logging-level)]
       [else
        (log-oauth2-info "Authentication token already stored.")
        (perform-api-command maybe-client)]))
@@ -71,73 +65,6 @@
     (logging-level)))
 
 ;; ---------- Internal procedures
-
-(define (perform-authentication maybe-client)
-  (define c-scopes
-    (command-line
-     #:program COMMAND
-     ;; ---------- Common commands
-     #:once-any
-     [("-v" "--verbose")
-      "Compile with verbose messages"
-      (logging-level 'info)]
-     [("-V" "--very-verbose")
-      "Compile with very verbose messages"
-      (logging-level 'debug)]
-     ;; ---------- Authentication flow
-     #:once-each
-     [("-i" "--client-id") id "Registered client ID"
-                           (c-client-id id)]
-     [("-s" "--client-secret") secret "Registered client secret"
-                               (c-client-secret secret)]
-     #:args (scope . scopes)
-     (cons scope scopes)))
-
-  (λ ()
-    (cond
-      [(or (false? (c-user))
-           (false? (c-client-id))
-           (false? (c-client-secret)))
-       (displayln "fitbit: expects -i -s on the command line, try -h for help")]
-      [else
-       (define real-client
-         (cond
-           [(false? maybe-client)
-            (struct-copy client fitbit-client
-                         [id (c-client-id)]
-                         [secret (c-client-secret)])]
-           [(false? (client-id maybe-client))
-            (struct-copy client maybe-client
-                         [id (c-client-id)]
-                         [secret (c-client-secret)])]
-           [else maybe-client]))
-       (set-client! real-client)
-       (save-clients)
-
-       (with-handlers
-           ([exn:fail:http?
-             (lambda (exn)
-               (displayln
-                (format "An HTTP error occurred: ~a (~a)" 
-                        (exn-message exn)
-                        (exn:fail:http-code exn))))]
-            [exn:fail:oauth2?
-             (lambda (exn)
-               (displayln exn)
-               (display "An OAuth error occurred: ")
-               (displayln (exn:fail:oauth2-error exn))
-               (display ">>> ")
-               (when (non-empty-string? (exn:fail:oauth2-error-description exn))
-                 (displayln (exn:fail:oauth2-error-description exn)))
-               (when (non-empty-string? (exn:fail:oauth2-error-uri exn))
-                 (displayln (exn:fail:oauth2-error-uri exn))))])
-         (define token
-           (initiate-code-flow
-            real-client
-            c-scopes
-            #:user-name (c-user)))
-
-         (displayln (format "Fitbit returned authenication token: ~a" token)))])))
 
 (define (parse-sleep json)
   (cons (map symbol->string
@@ -182,47 +109,6 @@
      (parse-weight json)]
     [else (error "unknown scope " scope)]))
 
-(define (display-data/screen data out)
-  (define widths (map (λ (c) (apply max (map string-length c))) (pivot data)))
-  (display-screen-row (car data) widths out)
-  (display-screen-row (make-list (length widths) "-") widths out #:sep "-+-" #:pad "-")
-  (for-each (λ (row) (display-screen-row row widths out)) (cdr data)))
-
-(define (display-screen-row row widths out #:sep [sep " | "] #:pad [pad " "])
-  (displayln
-   (string-join
-    (for/list ([datum row] [width widths])
-      (~a datum #:width width #:pad-string pad))
-    sep)
-   out))
-
-(define (pivot tabular)
-  ;; this is not meant for speed, it also doesn't do size checks.
-  (cons
-   (for/list ([row tabular])
-     (car row))
-   (if (equal? (cdr (car tabular)) '())
-       '()
-       (pivot (for/list ([row tabular])
-                (cdr row))))))
-
-(define (display-data/csv data out)
-  (for-each (λ (line) (displayln (string-join line ",") out)) data))
-
-(define (display-data data format output-to)
-  (define (display-with-port out)
-    (cond
-      [(equal? format 'csv)
-       (display-data/csv data out)]
-      [(equal? format 'screen)
-       (display-data/screen data out)]
-      [else (error "unknown format " format)]))
-  (cond
-    [(false? output-to)
-     (display-with-port (current-output-port))]
-    [(path-string? output-to)
-     (call-with-output-file output-to display-with-port)]
-    [else (error "invalid file path " output-to)]))
 
 (define (make-query-call scope params token)
   (define request-uri
