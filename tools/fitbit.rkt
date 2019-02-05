@@ -182,18 +182,19 @@
      (parse-weight json)]
     [else (error "unknown scope " scope)]))
 
-(define (display-data/screen data)
+(define (display-data/screen data out)
   (define widths (map (λ (c) (apply max (map string-length c))) (pivot data)))
-  (display-screen-row (car data) widths)
-  (display-screen-row (make-list (length widths) "-") widths #:sep "-+-" #:pad "-")
-  (for-each (λ (row) (display-screen-row row widths)) (cdr data)))
+  (display-screen-row (car data) widths out)
+  (display-screen-row (make-list (length widths) "-") widths out #:sep "-+-" #:pad "-")
+  (for-each (λ (row) (display-screen-row row widths out)) (cdr data)))
 
-(define (display-screen-row row widths #:sep [sep " | "] #:pad [pad " "])
+(define (display-screen-row row widths out #:sep [sep " | "] #:pad [pad " "])
   (displayln
    (string-join
     (for/list ([datum row] [width widths])
       (~a datum #:width width #:pad-string pad))
-    sep)))
+    sep)
+   out))
 
 (define (pivot tabular)
   ;; this is not meant for speed, it also doesn't do size checks.
@@ -205,16 +206,23 @@
        (pivot (for/list ([row tabular])
                 (cdr row))))))
 
-(define (display-data/csv data)
-  (for-each (λ (line) (displayln (string-join line ","))) data))
+(define (display-data/csv data out)
+  (for-each (λ (line) (displayln (string-join line ",") out)) data))
 
 (define (display-data data format output-to)
+  (define (display-with-port out)
+    (cond
+      [(equal? format 'csv)
+       (display-data/csv data out)]
+      [(equal? format 'screen)
+       (display-data/screen data out)]
+      [else (error "unknown format " format)]))
   (cond
-    [(equal? format 'csv)
-     (display-data/csv data)]
-    [(equal? format 'screen)
-     (display-data/screen data)]
-    [else (error "unknown format " format)]))
+    [(false? output-to)
+     (display-with-port (current-output-port))]
+    [(path-string? output-to)
+     (call-with-output-file output-to display-with-port)]
+    [else (error "invalid file path " output-to)]))
 
 (define (make-query-call scope params token)
   (define request-uri
