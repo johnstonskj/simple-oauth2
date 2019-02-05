@@ -26,9 +26,10 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 
 * `oauth2` - common data structures.
 * `oauth2/client` - client API representing all request types.
-* `oauth2/client-flow` - client API the provides higher-level grant flows.
+* `oauth2/client/flow` - client API the provides higher-level grant flows.
+* `oauth2/storage/config` - a storage API for persisting configuration.
 * `oauth2/storage/clients` - a storage API for persisting client details.
-* `oauth2/storage/profiles` - a storage API for persisting user profiles, including tokens.
+* `oauth2/storage/tokens` - a storage API for persisting authorization tokens.
 
 ## Example
 
@@ -49,7 +50,7 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 
 ## Tools
 
-TBD
+* `fitbit` - allows retrieval of sleep and weight records.
 
 ## Installation
 
@@ -66,6 +67,7 @@ TBD
 
 ## History
 
+* **1.0** - Stable Client; the client interface for code grant and token refresh is now complete. Fitbot tool working for sleep and weight scopes.
 * **0.1** - Initial Version; the client interface is reasonably stable, but only the authorization API has been tested.
 
 [![Racket Language](https://raw.githubusercontent.com/johnstonskj/racket-scaffold/master/scaffold/plank-files/racket-lang.png)](https://racket-lang.org/)
