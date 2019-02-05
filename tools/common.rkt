@@ -13,13 +13,10 @@
 
 (require racket/bool
          racket/cmdline
-         racket/date
          racket/format
          racket/list
-         racket/logging
          racket/string
          oauth2
-         oauth2/client
          oauth2/client/flow
          oauth2/storage/clients
          oauth2/storage/config
@@ -27,12 +24,8 @@
 
 ;; ---------- Implementation
 
-(define c-client-id (make-parameter #f))
-(define c-client-secret (make-parameter #f))
-(define c-auth-code (make-parameter #f))
-(define c-output-file (make-parameter #f))
-
 (define (perform-authentication command maybe-client init-client logging-level)
+  (define params (make-hash '((client-id . #f) (client-secret . #f) (auth-code . #f))))
   (define c-scopes
     (command-line
      #:program command
@@ -46,29 +39,33 @@
       (logging-level 'debug)]
      ;; ---------- Authentication flow
      #:once-each
-     [("-i" "--client-id") id "Registered client ID"
-                           (c-client-id id)]
-     [("-s" "--client-secret") secret "Registered client secret"
-                               (c-client-secret secret)]
+     [("-i" "--client-id")
+      id
+      "Registered client ID"
+      (hash-set! params 'client-id id)]
+     [("-s" "--client-secret")
+      secret
+      "Registered client secret"
+      (hash-set! params 'client-secret secret)]
      #:args (scope . scopes)
      (cons scope scopes)))
 
   (λ ()
     (cond
-      [(or (false? (c-client-id))
-           (false? (c-client-secret)))
+      [(or (false? (hash-ref params 'client-id))
+           (false? (hash-ref params 'client-secret)))
        (displayln (format "~a: expects -i -s on the command line, try -h for help" command))]
       [else
        (define real-client
          (cond
            [(false? maybe-client)
             (struct-copy client init-client
-                         [id (c-client-id)]
-                         [secret (c-client-secret)])]
+                         [id (hash-ref params 'client-id)]
+                         [secret (hash-ref params 'client-secret)])]
            [(false? (client-id maybe-client))
             (struct-copy client maybe-client
-                         [id (c-client-id)]
-                         [secret (c-client-secret)])]
+                         [id (hash-ref params 'client-id)]
+                         [secret (hash-ref params 'client-secret)])]
            [else maybe-client]))
        (set-client! real-client)
        (save-clients)
@@ -115,23 +112,68 @@
 
 ;; ---------- Internal procedures
 
+(define hbar-single #\u2500)
+(define vbar-single #\u2502)
+(define top-left-single #\u250C)
+(define top-right-single #\u2510)
+(define bottom-right-single #\u2518)
+(define bottom-left-single #\u2514)
+(define left-tee-single #\u251C)
+(define top-tee-single #\u252C)
+(define right-tee-single #\u2524)
+(define bottom-tee-single #\u2534)
+(define cross-single #\u253C)
+
 (define (display-data/screen data out [has-titles #t])
   (define widths (map (λ (c) (apply max (map string-length c))) (pivot data)))
+  (display-screen-border 'top widths out)
   (define data-rows
     (cond
       [has-titles
        (display-screen-row (car data) widths out)
-       (display-screen-row (make-list (length widths) "-") widths out #:sep "-+-" #:pad "-")
+       (display-screen-border 'separator widths out)
        (cdr data)]
       [else data]))
-  (for-each (λ (row) (display-screen-row row widths out)) data-rows))
+  (for-each (λ (row) (display-screen-row row widths out)) data-rows)
+  (display-screen-border 'bottom widths out))
 
-(define (display-screen-row row widths out #:sep [sep " | "] #:pad [pad " "])
+(define (display-screen-border type widths out)
+  (define fake-data (make-list (length widths) (string hbar-single)))
+  (cond
+    [(equal? type 'top)
+     (display-screen-row fake-data widths out
+                         #:pad (string hbar-single)
+                         #:sep (string hbar-single top-tee-single hbar-single)
+                         #:left top-left-single
+                         #:right top-right-single)]
+    [(equal? type 'separator)
+     (display-screen-row fake-data widths out
+                         #:pad (string hbar-single)
+                         #:sep (string hbar-single cross-single hbar-single)
+                         #:left left-tee-single
+                         #:right right-tee-single)]
+    [(equal? type 'bottom)
+     (display-screen-row fake-data widths out
+                         #:pad (string hbar-single)
+                         #:sep (string hbar-single bottom-tee-single hbar-single)
+                         #:left bottom-left-single
+                         #:right bottom-right-single)]
+    [else (error "unknown border type " type)]))
+
+(define (display-screen-row row widths out
+                            #:align [align 'left]
+                            #:sep [sep (string #\space vbar-single #\space)]
+                            #:pad [pad " "]
+                            #:left [left vbar-single]
+                            #:right [right vbar-single])
   (displayln
-   (string-join
-    (for/list ([datum row] [width widths])
-      (~a datum #:width width #:pad-string pad))
-    sep)
+   (format "~a~a~a"
+           left
+           (string-join
+            (for/list ([datum row] [width widths])
+              (~a datum #:align align #:width width #:pad-string pad))
+            sep)
+           right)
    out))
 
 (define (pivot tabular)

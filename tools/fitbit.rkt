@@ -13,7 +13,6 @@
          racket/format
          racket/list
          racket/logging
-         racket/string
          json
          oauth2
          oauth2/client
