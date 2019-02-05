@@ -11,6 +11,7 @@
 
 (require racket/bool
          racket/cmdline
+         racket/date
          racket/format
          racket/list
          racket/logging
@@ -174,15 +175,46 @@
                      (hash-ref record 'fat))))))
 
 (define (parse scope json)
-  (define csv-list
-    (cond
-      [(equal? scope 'sleep)
-       (parse-sleep json)]
-      [(equal? scope 'weight)
-       (parse-weight json)]
-      [else (error "unknown scope " scope)]))
-  (for ([line csv-list])
-    (displayln (string-join line ","))))
+  (cond
+    [(equal? scope 'sleep)
+     (parse-sleep json)]
+    [(equal? scope 'weight)
+     (parse-weight json)]
+    [else (error "unknown scope " scope)]))
+
+(define (display-data/screen data)
+  (define widths (map (λ (c) (apply max (map string-length c))) (pivot data)))
+  (display-screen-row (car data) widths)
+  (display-screen-row (make-list (length widths) "-") widths #:sep "-+-" #:pad "-")
+  (for-each (λ (row) (display-screen-row row widths)) (cdr data)))
+
+(define (display-screen-row row widths #:sep [sep " | "] #:pad [pad " "])
+  (displayln
+   (string-join
+    (for/list ([datum row] [width widths])
+      (~a datum #:width width #:pad-string pad))
+    sep)))
+
+(define (pivot tabular)
+  ;; this is not meant for speed, it also doesn't do size checks.
+  (cons
+   (for/list ([row tabular])
+     (car row))
+   (if (equal? (cdr (car tabular)) '())
+       '()
+       (pivot (for/list ([row tabular])
+                (cdr row))))))
+
+(define (display-data/csv data)
+  (for-each (λ (line) (displayln (string-join line ","))) data))
+
+(define (display-data data format output-to)
+  (cond
+    [(equal? format 'csv)
+     (display-data/csv data)]
+    [(equal? format 'screen)
+     (display-data/screen data)]
+    [else (error "unknown format " format)]))
 
 (define (make-query-call scope params token)
   (define request-uri
@@ -204,9 +236,9 @@
   (define locale-header
     (format "Accept-Language: ~a"
             (cond
-              [(equal? (hash-ref params 'units) "UK")
+              [(equal? (hash-ref params 'units) 'UK)
                "en_GB"]
-              [(equal? (hash-ref params 'units) "US")
+              [(equal? (hash-ref params 'units) 'US)
                "en_US"]
               [else
                "en"])))
@@ -215,12 +247,16 @@
                                       #:headers (list locale-header)))
   (cond
     [(= (first response) 200)
-     (parse scope (bytes->jsexpr (fourth response)))]
+     (define data (parse scope (bytes->jsexpr (fourth response))))
+     (display-data data (hash-ref params 'format) (hash-ref params 'output #f))]
     [else (error "HTTP error: " response)]))
 
 
 (define (perform-api-command client)
-  (define parameters (make-hash '((start-date . "2019-01-22") (units . "US"))))
+  (date-display-format 'iso-8601)
+  (define parameters (make-hash `((start-date . ,(date->string (current-date)))
+                                  (units . US)
+                                  (format . csv))))
   (define query-scope
     (command-line
      #:program COMMAND
@@ -237,7 +273,9 @@
      [("-e" "--end-date") end "End date (YYYY-MM-DD)"
                           (hash-set! parameters 'end-date end)]
      [("-u" "--units") units "Unit system (US, UK, metric)"
-                          (hash-set! parameters 'units units)]
+                          (hash-set! parameters 'units (string->symbol units))]
+     [("-f" "--format") format "Output format (csv)"
+                          (hash-set! parameters 'format (string->symbol format))]
      [("-o" "--output-file") path "Output file"
                              (hash-set! parameters 'output path)]
      #:args (scope)
