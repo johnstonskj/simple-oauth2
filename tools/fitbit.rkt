@@ -11,6 +11,7 @@
 
 (require racket/bool
          racket/cmdline
+         racket/list
          racket/logging
          racket/string
          json
@@ -136,23 +137,46 @@
 
          (displayln (format "Fitbit returned authenication token: ~a" token)))])))
 
-(define (make-query-call client token params)
-  #t)
+(define (make-query-call scope params token)
+  (define request-uri
+    (cond
+      [(equal? scope 'sleep)
+       (format "https://api.fitbit.com/1.2/user/-/sleep/date/~a~a.json"
+               (hash-ref params 'start-date)
+               (if (hash-has-key? params 'end-date)
+                   (string-append "/" (hash-ref params 'end-date))
+                   ""))]
+      [else (error "Unknown scope: " scope)]))
+  (log-oauth2-info "Request URL <~a>" request-uri)
+  (define response (resource-sendrecv request-uri token))
+  (cond
+    [(= (first response) 200)
+     (bytes->jsexpr (fourth response))]
+    [else (error "HTTP error: " response)]))
 
 
 (define (perform-api-command client)
-  (command-line
-   #:program COMMAND
-   ;; ---------- Common commands
-   #:once-any
-   [("-v" "--verbose") "Compile with verbose messages"
-                       (logging-level 'info)]
-   [("-V" "--very-verbose") "Compile with very verbose messages"
-                            (logging-level 'debug)]
-   ;; ---------- API access commands
-   #:once-each
-   [("-o" "--output-file") path "Output file"
-                           (c-output-file path)])
+  (define parameters (make-hash '((start-date . "2019-01-22"))))
+  (define query-scope
+    (command-line
+     #:program COMMAND
+     ;; ---------- Common commands
+     #:once-any
+     [("-v" "--verbose") "Compile with verbose messages"
+                         (logging-level 'info)]
+     [("-V" "--very-verbose") "Compile with very verbose messages"
+                              (logging-level 'debug)]
+     ;; ---------- API access commands
+     #:once-each
+     [("-s" "--start-date") start "Start date (YYYY-MM-DD)"
+                            (hash-set! parameters 'start-date start)]
+     [("-e" "--end-date") end "End date (YYYY-MM-DD)"
+                          (hash-set! parameters 'end-date end)]
+     [("-o" "--output-file") path "Output file"
+                             (hash-set! parameters 'output path)]
+     #:args (scope)
+     (string->symbol scope)))
+  
   (λ ()
     (define the-token (check-token-refresh client (get-current-user-name)))
-    (make-query-call client the-token (hash))))
+    (make-query-call query-scope parameters the-token)))

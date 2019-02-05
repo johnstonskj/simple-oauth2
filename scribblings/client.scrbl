@@ -217,7 +217,27 @@ See @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Toke
   §2.1.
 }
 
-@subsection{Helper Functions}
+@subsection{Resource Access}
+
+@defproc[(resource-sendrecv
+          [resource-uri string?]
+          [token token?]
+          [#:method method string? "GET"]
+          [#:headers headers (listof bytes?) '()]
+          [#:data data (or/c bytes? #f) #f])
+         list?]{
+Make a request to a resource server, protected by @racket[token], and return the result. The
+results are in the form of a four-part list @italic{(http-code http-message response-headers
+response-body)}.
+}
+
+@defproc[(make-authorization-header
+          [token token?])
+         bytes?]{
+Create a valid HTTP authorization header, as a byte string, from the provided @racket[token] value.
+}
+
+@subsection{Parameter Creation}
 
 @defproc[(create-random-state
           [bytes exact-positive-integer? 16])
@@ -243,12 +263,6 @@ code-verifier  = 43*128unreserved
 unreserved     = ALPHA / DIGIT / "-" / "." / "_" / "~"
 ALPHA          = %x41-5A / %x61-7A
 DIGIT          = %x30-39}|
-}
-
-@defproc[(make-authorization-header
-          [token token?])
-         bytes?]{
-Create a valid HTTP authorization header, as a byte string, from the provided @racket[token] value.
 }
 
 @defproc[#:kind "predicate" (pkce?

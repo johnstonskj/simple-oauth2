@@ -26,7 +26,8 @@
          revoke-token
          introspect-token
          
-         make-authorization-header)
+         make-authorization-header
+         resource-sendrecv)
 
 ;; ---------- Requirements
 
@@ -203,6 +204,20 @@
                                (token-type token)
                                (token-access-token token))))
 
+(define (resource-sendrecv resource-uri token #:method [method "GET"] #:headers [headers '()] #:data [data #f])
+  (define uri (string->url resource-uri))
+  (define-values
+    (status response-headers in-port)
+    (http-sendrecv
+     (url-host uri)
+     resource-uri
+     #:ssl? (equal? (url-scheme uri) "https")
+     #:method method
+     #:headers (cons (make-authorization-header token) headers)
+     #:data data))
+  (log-oauth2-debug "(values ~s ~s #port)" status response-headers)
+  (parse-response status response-headers in-port))
+
 ;; ---------- Internal Implementation
 
 (define empty-string "")
@@ -242,7 +257,7 @@
   (log-oauth2-debug "  ~s" uri)
   (log-oauth2-debug "  #:port ~s" (url-port uri))
   (log-oauth2-debug "  #:ssl? ~s ; ~s" (equal? (url-scheme uri) "https") (url-scheme uri))
-  (log-oauth2-debug "  #:headers ~s" (cons (format "~a: ~a" (header-name 'content-type) data-type) request-headers))
+  (log-oauth2-debug "  #:headers ~s" (cons (make-header-string 'content-type data-type) request-headers))
   (log-oauth2-debug "  #:data ~s)" data)
   (define-values
     (status response-headers in-port)
@@ -255,7 +270,7 @@
      #:headers (cons (format "~a: ~a" (header-name 'content-type) data-type) request-headers)
      #:data data))
   (log-oauth2-debug "(values ~s ~s #port)" status response-headers)
-  (parse-response status response-headers in-port))
+  (parse-response/with-errors status response-headers in-port))
 
 (define (string-split-first str sep)
   (define index
@@ -265,18 +280,8 @@
       (values str empty-string)
       (values (substring str 0 index) (string-trim (substring str index)))))
 
-(define (parse-response status headers in-port)
-  (define-values (protocol rest) (string-split-first (bytes->string/utf-8 status) #\space))
-  (define-values (code msg) (string-split-first rest #\space))
-  (define response 
-    (list
-     (string->number code)
-     msg
-     (make-hash 
-      (for/list ([header headers])
-        (define-values (k v) (string-split-first (bytes->string/utf-8 header) #\:))
-        (cons k (string-trim (substring v 1)))))
-     (port->bytes in-port)))
+(define (parse-response/with-errors status headers in-port)
+  (define response (parse-response status headers in-port))
   (when (<= (error-code 'bad-request) (first response) (error-code 'last-error))
     (log-oauth2-error "error response, code ~a, body ~a" (first response) (fourth response))
     (define content-type (hash-ref (third response) (header-name 'content-type)))
@@ -307,7 +312,18 @@
       [else
        (raise (apply make-exn:fail:http response))]))
   response)
-  
+
+(define (parse-response status headers in-port)
+  (define-values (protocol rest) (string-split-first (bytes->string/utf-8 status) #\space))
+  (define-values (code msg) (string-split-first rest #\space))
+  (list
+   (string->number code)
+   msg
+   (make-hash 
+    (for/list ([header headers])
+      (define-values (k v) (string-split-first (bytes->string/utf-8 header) #\:))
+      (cons k (string-trim (substring v 1)))))
+   (port->bytes in-port)))
 
 (define (token-from-response json)
   (make-token
