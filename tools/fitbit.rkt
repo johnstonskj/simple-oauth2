@@ -11,6 +11,7 @@
 
 (require racket/bool
          racket/cmdline
+         racket/format
          racket/list
          racket/logging
          racket/string
@@ -59,7 +60,7 @@
        (displayln "No authentication code stored, please authenticate.")
        (perform-authentication maybe-client)]
       [else
-       (displayln "Authentication token already stored.")
+       (log-oauth2-info "Authentication token already stored.")
        (perform-api-command maybe-client)]))
 
   (with-logging-to-port
@@ -137,6 +138,39 @@
 
          (displayln (format "Fitbit returned authenication token: ~a" token)))])))
 
+(define (parse-sleep json)
+  (cons (map symbol->string
+             '(date start minbefore minasleep minawake minafter
+                    efficiency deep:min deep:avg deep:count light:min light:avg light:count
+                    rem:min rem:avg rem:count wake:min wake:avg wake:count))
+        (for/list ([record (hash-ref json 'sleep)])
+          (map ~a
+               (append (list (hash-ref record 'dateOfSleep)
+                             (hash-ref record 'startTime))
+                       (list (hash-ref record 'minutesToFallAsleep)
+                             (hash-ref record 'minutesAsleep)
+                             (hash-ref record 'minutesAwake)
+                             (hash-ref record 'minutesAfterWakeup)
+                             (hash-ref record 'efficiency))
+                       (cond
+                         [(equal? (hash-ref record 'type) "stages")
+                          (define summary (hash-ref (hash-ref record 'levels) 'summary))
+                          (flatten
+                           (for/list ([stage '(deep light rem wake)])
+                             (define data (hash-ref summary stage))
+                             (list (hash-ref data 'minutes)
+                                   (hash-ref data 'thirtyDayAvgMinutes)
+                                   (hash-ref data 'count))))]))))))
+
+(define (parse scope json)
+  (define csv-list
+    (cond
+      [(equal? scope 'sleep)
+       (parse-sleep json)]
+      [else (error "unknown scope " scope)]))
+  (for ([line csv-list])
+    (displayln (string-join line ","))))
+
 (define (make-query-call scope params token)
   (define request-uri
     (cond
@@ -151,7 +185,7 @@
   (define response (resource-sendrecv request-uri token))
   (cond
     [(= (first response) 200)
-     (bytes->jsexpr (fourth response))]
+     (parse scope (bytes->jsexpr (fourth response)))]
     [else (error "HTTP error: " response)]))
 
 
