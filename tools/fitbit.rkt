@@ -162,11 +162,24 @@
                                    (hash-ref data 'thirtyDayAvgMinutes)
                                    (hash-ref data 'count))))]))))))
 
+(define (parse-weight json)
+  (cons (map symbol->string
+             '(date time weight bmi fat))
+        (for/list ([record (hash-ref json 'weight)])
+          (map ~a
+               (list (hash-ref record 'date)
+                     (hash-ref record 'time)
+                     (hash-ref record 'weight)
+                     (hash-ref record 'bmi)
+                     (hash-ref record 'fat))))))
+
 (define (parse scope json)
   (define csv-list
     (cond
       [(equal? scope 'sleep)
        (parse-sleep json)]
+      [(equal? scope 'weight)
+       (parse-weight json)]
       [else (error "unknown scope " scope)]))
   (for ([line csv-list])
     (displayln (string-join line ","))))
@@ -180,9 +193,26 @@
                (if (hash-has-key? params 'end-date)
                    (string-append "/" (hash-ref params 'end-date))
                    ""))]
+      [(equal? scope 'weight)
+       (format "https://api.fitbit.com/1/user/-/body/log/weight/date/~a~a.json"
+               (hash-ref params 'start-date)
+               (if (hash-has-key? params 'end-date)
+                   (string-append "/" (hash-ref params 'end-date))
+                   ""))]
       [else (error "Unknown scope: " scope)]))
   (log-oauth2-info "Request URL <~a>" request-uri)
-  (define response (resource-sendrecv request-uri token))
+  (define locale-header
+    (format "Accept-Language: ~a"
+            (cond
+              [(equal? (hash-ref params 'units) "UK")
+               "en_GB"]
+              [(equal? (hash-ref params 'units) "US")
+               "en_US"]
+              [else
+               "en"])))
+  (define response (resource-sendrecv request-uri
+                                      token
+                                      #:headers (list locale-header)))
   (cond
     [(= (first response) 200)
      (parse scope (bytes->jsexpr (fourth response)))]
@@ -190,7 +220,7 @@
 
 
 (define (perform-api-command client)
-  (define parameters (make-hash '((start-date . "2019-01-22"))))
+  (define parameters (make-hash '((start-date . "2019-01-22") (units . "US"))))
   (define query-scope
     (command-line
      #:program COMMAND
@@ -206,6 +236,8 @@
                             (hash-set! parameters 'start-date start)]
      [("-e" "--end-date") end "End date (YYYY-MM-DD)"
                           (hash-set! parameters 'end-date end)]
+     [("-u" "--units") units "Unit system (US, UK, metric)"
+                          (hash-set! parameters 'units units)]
      [("-o" "--output-file") path "Output file"
                              (hash-set! parameters 'output path)]
      #:args (scope)
