@@ -7,6 +7,7 @@
 
 (provide
  perform-authentication
+ perform-password-authentication
 
  parse-rows
  parse-row
@@ -27,6 +28,63 @@
          oauth2/storage/tokens)
 
 ;; ---------- Implementation
+
+(define (perform-password-authentication command client logging-level)
+  (define params (make-hash '((username . #f) (password . #f))))
+  (command-line
+   #:program command
+   ;; ---------- Common commands
+   #:once-any
+   [("-v" "--verbose")
+    "Compile with verbose messages"
+    (logging-level 'info)]
+   [("-V" "--very-verbose")
+    "Compile with very verbose messages"
+    (logging-level 'debug)]
+   ;; ---------- Authentication flow
+   #:once-each
+   [("-u" "--username")
+    username
+    "User name for remote service"
+    (hash-set! params 'username username)]
+   [("-p" "--password")
+    password
+    "Password for remote service"
+    (hash-set! params 'password password)])
+  
+  (λ ()
+    (cond
+      [(or (false? (hash-ref params 'username))
+           (false? (hash-ref params 'password)))
+       (displayln (format "~a: expects -u and -p on the command line, try -h for help" command))]
+      [else
+       (set-client! client)
+       (save-clients)
+
+       (with-handlers
+           ([exn:fail:http?
+             (lambda (exn)
+               (displayln
+                (format "An HTTP error occurred: ~a (~a)" 
+                        (exn-message exn)
+                        (exn:fail:http-code exn))))]
+            [exn:fail:oauth2?
+             (lambda (exn)
+               (displayln exn)
+               (display "An OAuth error occurred: ")
+               (displayln (exn:fail:oauth2-error exn))
+               (display ">>> ")
+               (when (non-empty-string? (exn:fail:oauth2-error-description exn))
+                 (displayln (exn:fail:oauth2-error-description exn)))
+               (when (non-empty-string? (exn:fail:oauth2-error-uri exn))
+                 (displayln (exn:fail:oauth2-error-uri exn))))])
+         (define token
+           (initiate-password-flow
+            client
+            (hash-ref params 'username)
+            (hash-ref params 'password)))
+
+         (displayln (format "Service returned authenication token: ~a" token)))])))
 
 (define (perform-authentication command maybe-client init-client logging-level)
   (define params (make-hash '((client-id . #f) (client-secret . #f) (auth-code . #f))))
@@ -101,7 +159,6 @@
 
 (define (parse-rows json keys [ref #f] [more-keys '()] [more-proc #f])
   (define jsobject (if (false? ref) json (hash-ref json ref)))
-  (displayln jsobject)
   (unless (list? jsobject) (error "expecting a list of rows"))
   (cons (append
          (map symbol->string keys)

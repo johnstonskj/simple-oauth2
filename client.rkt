@@ -223,11 +223,14 @@
 (define empty-string "")
 
 (define (fetch-token-common client data-list)
-  (define header (format "~a: Basic ~a" (header-name 'authorization) (string-trim (bytes->string/latin-1 (encode-client client)))))
+  (define headers
+    (if (false? (client-secret client))
+        '()
+        (list (format "~a: Basic ~a" (header-name 'authorization) (string-trim (bytes->string/latin-1 (encode-client client)))))))
   (define response
     (do-post/form-encoded-list/json
      (string->url (client-token-uri client))
-     (list header)
+     headers
      data-list))
   (cond
     [(= (first response) (error-code 'ok))

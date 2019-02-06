@@ -62,7 +62,20 @@
 
 (define (initiate-application-flow) #f)
 
-(define (initiate-password-flow) #f)
+(define (initiate-password-flow client username password  #:local-user-name [user-name #f])
+  (define token-response
+    (grant-token/from-owner-credentials client username password))
+  (log-oauth2-debug "grant-token/from-owner-credentials returned ~a" token-response)
+
+  (set-token!
+   (if (false? user-name)
+       (get-current-user-name)
+       user-name)
+   (client-service-name client)
+   token-response)
+  (save-tokens)
+
+  token-response)
 
 (define (check-token-refresh client user-name)
   (define stored-token (get-token user-name (client-service-name client)))
