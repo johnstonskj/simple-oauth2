@@ -107,9 +107,9 @@
                               (logging-level 'debug)]
      ;; ---------- API access commands
      #:once-each
-     [("-s" "--start-date") start "Start date (YYYY-MM-DD)"
+     [("-s" "--start-date") start "Start date (YYYY-MM-DD), may include time (THH:MM:SS)"
                             (hash-set! parameters 'start-date start)]
-     [("-e" "--end-date") end "End date (YYYY-MM-DD)"
+     [("-e" "--end-date") end "End date (YYYY-MM-DD), may include time (THH:MM:SS)"
                           (hash-set! parameters 'end-date end)]
      [("-f" "--format") format "Output format (csv)"
                           (hash-set! parameters 'format (string->symbol format))]

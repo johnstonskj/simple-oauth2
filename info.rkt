@@ -32,6 +32,6 @@
   '("scribblings" "private"))
 
 (define racket-launcher-names
-  '("fitbit"))
+  '("fitbit" "livongo"))
 (define racket-launcher-libraries
-  '("tools/fitbit.rkt"))
+  '("tools/fitbit.rkt" "tools/livongo.rkt"))

@@ -30,8 +30,9 @@ All tools need to determine their authorization state, which can be one of:
  #:style 'ordered]
 
 If the tools detect either of the first two states the tool will not perform
-any protected calls, but force the use of the @tt{-i} and @tt{-s} flags to use the
-client details to perform the code grant flow.
+any protected calls, but force authorization. For services using code grant,
+the use of the @tt{-i} and @tt{-s} flags are required. For services using
+password grant the use of the @tt{-u} and @tt{-p} flags are required.
 
 @verbatim|{
   $ fitbit -i HDGGEX -s SGVsbG8gV29ybGQgZnJvbSBTaW1vbgo=
@@ -47,7 +48,7 @@ to (using @tt{-o}).
 @;{============================================================================}
 @section[]{Fitbit client}
 
-This client implements simple queries against the
+This tool implements simple queries against the
 @hyperlink["https://dev.fitbit.com/build/reference/web-api/"]{Fitbit API}.
 Once the client has been authorized and the token stored, the tool will
 perform queries against the @tt{sleep} and @tt{weight} scope. Queries support
@@ -91,3 +92,22 @@ on-screen table.
 │2019-02-05 │ 15:04:16 │ 262.2  │ 35.59 │ 39.25299835205078│
 └───────────┴──────────┴────────┴───────┴──────────────────┘
  }|
+
+@;{============================================================================}
+@section[]{Livongo client}
+
+This tool implements simple queries against the blood glucose @tt{readings} scope
+provided by @hyperlink["https://my.livongo.com/#/dashboard"]{Livongo}.
+
+@verbatim|{
+  $ livongo -h
+livongo [ <option> ... ] <scope>
+ where <option> is one of
+/ -v, --verbose : Compile with verbose messages
+\ -V, --very-verbose : Compile with very verbose messages
+  -s <start>, --start-date <start> : Start date (YYYY-MM-DD), may include time (THH:MM:SS)
+  -e <end>, --end-date <end> : End date (YYYY-MM-DD), may include time (THH:MM:SS)
+  -f <format>, --format <format> : Output format (csv)
+  -o <path>, --output-file <path> : Output file
+  --help, -h : Show this help
+}|
