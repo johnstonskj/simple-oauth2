@@ -13,6 +13,7 @@
          racket/format
          racket/list
          racket/logging
+         racket/set
          json
          oauth2
          oauth2/client
@@ -66,65 +67,51 @@
 ;; ---------- Internal procedures
 
 (define (parse-sleep json)
-  (cons (map symbol->string
-             '(date start minbefore minasleep minawake minafter
-                    efficiency deep:min deep:avg deep:count light:min light:avg light:count
-                    rem:min rem:avg rem:count wake:min wake:avg wake:count))
-        (for/list ([record (hash-ref json 'sleep)])
-          (map ~a
-               (append (list (hash-ref record 'dateOfSleep)
-                             (hash-ref record 'startTime))
-                       (list (hash-ref record 'minutesToFallAsleep)
-                             (hash-ref record 'minutesAsleep)
-                             (hash-ref record 'minutesAwake)
-                             (hash-ref record 'minutesAfterWakeup)
-                             (hash-ref record 'efficiency))
-                       (cond
-                         [(equal? (hash-ref record 'type) "stages")
-                          (define summary (hash-ref (hash-ref record 'levels) 'summary))
-                          (flatten
-                           (for/list ([stage '(deep light rem wake)])
-                             (define data (hash-ref summary stage))
-                             (list (hash-ref data 'minutes)
-                                   (hash-ref data 'thirtyDayAvgMinutes)
-                                   (hash-ref data 'count))))]))))))
-
-(define (parse-weight json)
-  (cons (map symbol->string
-             '(date time weight bmi fat))
-        (for/list ([record (hash-ref json 'weight)])
-          (map ~a
-               (list (hash-ref record 'date)
-                     (hash-ref record 'time)
-                     (hash-ref record 'weight)
-                     (hash-ref record 'bmi)
-                     (hash-ref record 'fat))))))
+  (parse-rows json
+              '(dateOfSleep startTime minutesToFallAsleep minutesAsleep minutesAwake
+                            minutesAfterWakeup efficiency)
+              'sleep
+              '(deep:minutes deep:thirtyDayAvgMinutes deep:count
+                             light:minutes light:thirtyDayAvgMinutes light:count
+                             rem:minutes rem:thirtyDayAvgMinutes rem:count
+                             wake:minutes wake:thirtyDayAvgMinutes wake:count)
+              (λ (record keys)
+                (cond
+                  [(equal? (hash-ref record 'type) "stages")
+                   (define summary (hash-ref (hash-ref record 'levels) 'summary))
+                   (flatten
+                    (for/list ([stage '(deep light rem wake)])
+                      (define data (hash-ref summary stage))
+                      (list (hash-ref data 'minutes)
+                            (hash-ref data 'thirtyDayAvgMinutes)
+                            (hash-ref data 'count))))]
+                  [else
+                   (make-list 12 0)]))))
 
 (define (parse scope json)
   (cond
     [(equal? scope 'sleep)
      (parse-sleep json)]
     [(equal? scope 'weight)
-     (parse-weight json)]
-    [else (error "unknown scope " scope)]))
+     (parse-rows json '(date time weight bmi fat) 'weight)]))
 
+(define (make-request-uri scope params)
+  (cond
+    [(equal? scope 'sleep)
+     (format "https://api.fitbit.com/1.2/user/-/sleep/date/~a~a.json"
+             (hash-ref params 'start-date)
+             (if (hash-has-key? params 'end-date)
+                 (string-append "/" (hash-ref params 'end-date))
+                 ""))]
+    [(equal? scope 'weight)
+     (format "https://api.fitbit.com/1/user/-/body/log/weight/date/~a~a.json"
+             (hash-ref params 'start-date)
+             (if (hash-has-key? params 'end-date)
+                 (string-append "/" (hash-ref params 'end-date))
+                 ""))]))
 
 (define (make-query-call scope params token)
-  (define request-uri
-    (cond
-      [(equal? scope 'sleep)
-       (format "https://api.fitbit.com/1.2/user/-/sleep/date/~a~a.json"
-               (hash-ref params 'start-date)
-               (if (hash-has-key? params 'end-date)
-                   (string-append "/" (hash-ref params 'end-date))
-                   ""))]
-      [(equal? scope 'weight)
-       (format "https://api.fitbit.com/1/user/-/body/log/weight/date/~a~a.json"
-               (hash-ref params 'start-date)
-               (if (hash-has-key? params 'end-date)
-                   (string-append "/" (hash-ref params 'end-date))
-                   ""))]
-      [else (error "Unknown scope: " scope)]))
+  (define request-uri (make-request-uri scope params))
   (log-oauth2-info "Request URL <~a>" request-uri)
   (define locale-header
     (format "Accept-Language: ~a"
@@ -135,9 +122,11 @@
                "en_US"]
               [else
                "en"])))
-  (define response (resource-sendrecv request-uri
-                                      token
-                                      #:headers (list locale-header)))
+  (define response
+    (resource-sendrecv
+     request-uri
+     token
+     #:headers (list locale-header)))
   (cond
     [(= (first response) 200)
      (define data (parse scope (bytes->jsexpr (fourth response))))
@@ -172,7 +161,9 @@
      [("-o" "--output-file") path "Output file"
                              (hash-set! parameters 'output path)]
      #:args (scope)
-     (string->symbol scope)))
+     (if (set-member? (set "sleep" "weight") scope)
+         (string->symbol scope)
+         (error "unknown scope " scope))))
   
   (λ ()
     (define the-token (check-token-refresh client (get-current-user-name)))

@@ -7,6 +7,10 @@
 
 (provide
  perform-authentication
+
+ parse-rows
+ parse-row
+ 
  display-data)
 
 ;; ---------- Requirements
@@ -95,6 +99,26 @@
 
          (displayln (format "Service returned authenication token: ~a" token)))])))
 
+(define (parse-rows json keys [ref #f] [more-keys '()] [more-proc #f])
+  (define jsobject (if (false? ref) json (hash-ref json ref)))
+  (displayln jsobject)
+  (unless (list? jsobject) (error "expecting a list of rows"))
+  (cons (append
+         (map symbol->string keys)
+         (map symbol->string more-keys))
+        (for/list ([row jsobject])
+          (parse-row row keys more-keys more-proc))))
+
+(define (parse-row json keys [more-keys '()] [more-proc #f])
+  (unless (hash? json) (error "expecting a hash for each row"))
+  (map ~a
+       (append
+        (for/list ([key keys])
+          (hash-ref json key))
+        (if (or (empty? more-keys) (false? more-proc))
+            '()
+            (more-proc json more-keys)))))
+      
 (define (display-data data format output-to)
   (define (display-with-port out)
     (cond
