@@ -5,7 +5,8 @@
 ;;
 ;; Copyright (c) 2019 Simon Johnston (johnstonskj@gmail.com).
 
-;; Racket Style Guide: http://docs.racket-lang.org/style/index.html
+;; https://openid.net/specs/openid-connect-core-1_0.html
+;; OpenID Connect Core 1.0 incorporating errata set 1
 
 (require racket/contract)
 

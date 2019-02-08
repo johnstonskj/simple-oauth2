@@ -43,6 +43,8 @@ Implementations of a few web APIs, including OAuth2, PicasaWeb, and Blogger}, an
 
 @include-section["client.scrbl"]
 
+@include-section["openid.scrbl"]
+
 @include-section["storage.scrbl"]
 
 @include-section["tools.scrbl"]
