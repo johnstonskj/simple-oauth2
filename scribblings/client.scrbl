@@ -191,16 +191,46 @@ This grant type is suitable for clients capable of obtaining the
 From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.4.2"]{The OAuth 2.0 Authorization
   Framework}, §4.4.2:
 @emph{The client can request an access token using only its client
-   credentials (or other supported means of authentication) when the
-   client is requesting access to the protected resources under its
-   control, or those of another resource owner that have been previously
-   arranged with the authorization server (the method of which is beyond
-   the scope of this specification).}
+  credentials (or other supported means of authentication) when the
+  client is requesting access to the protected resources under its
+  control, or those of another resource owner that have been previously
+  arranged with the authorization server (the method of which is beyond
+  the scope of this specification).}
 
 @itemlist[
   @item{@racket[client] - the client configuration for the service performing
   the authorization.}]
 }
+
+@defproc[(grant-token/extension
+          [client client?]
+          [grant-type-urn string?]
+          [parameters (hash/c symbol? string?) (hash)])
+         token?]{
+From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.5"]{The OAuth 2.0 Authorization
+  Framework}, §4.5: @emph{The client uses an extension grant type by specifying the grant type
+  using an absolute URI (defined by the authorization server) as the
+  value of the "grant_type" parameter of the token endpoint, and by
+  adding any additional parameters necessary.}
+
+@itemlist[
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[grant-type-urn] - the absolute URI (actually verifies it as a URN)
+   that identifies the @tt{grant_type} extension.}
+  @item{@racket[parameters] - (optional) a mapping of symbols that represent grant
+   parameter names and string values.}]
+
+@bold{Example SAML 2.0 extension}
+
+@racketblock[
+(grant-token/extension
+ client
+ "urn:ietf:params:oauth:grant_type:saml2-bearer"
+ (hash 'assertion "PEFzc2VydGlvbiBJc3N1ZUluc3RhbnQ9Ij...IwMTEtMDU"))
+]
+}
+
 
 @defproc[(refresh-token
           [client client?]

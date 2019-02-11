@@ -60,8 +60,6 @@
                        #:revoke [revoke-uri #f] #:introspect [introspect-uri #f])
   (unless (non-empty-string? service-name)
     (error "service name must be a non-empty string"))
-  (unless (non-empty-string? id)
-    (error "client id must be a non-empty string"))
   (unless (validate-url authorization-uri)
     (error "authorization URL is invalid: " authorization-uri))
   (unless (validate-url token-uri)
@@ -133,7 +131,6 @@
   ;; create-client
   (check-true (client? (create-client "service name" "id" "secret" valid-url valid-url)))
   (check-exn exn:fail? (λ () (create-client "" "id" "secret" valid-url valid-url)))
-  (check-exn exn:fail? (λ () (create-client "service name" "" "secret" valid-url valid-url)))
   (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" not-valid-url valid-url)))
   (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" valid-url not-valid-url)))
   (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" valid-url valid-url #:revoke not-valid-url)))

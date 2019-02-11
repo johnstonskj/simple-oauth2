@@ -21,6 +21,8 @@
          grant-token/implicit
          grant-token/from-owner-credentials
          grant-token/from-client-credentials
+         grant-token/extension
+         
          refresh-token
          revoke-token
          introspect-token
@@ -128,7 +130,7 @@
                    (client-service-name client) username)
   (fetch-token-common
    client
-   (append (list (cons 'grant-type "password")
+   (append (list (cons 'grant_type "password")
                  (cons 'username username)
                  (cons 'password password)
                  (cons 'client_id (client-id client))))))
@@ -141,6 +143,18 @@
    (append (list (cons 'grant_type "password")
                  (cons 'client_id (client-id client))
                  (cons 'client_secret (client-secret client))))))
+
+(define (grant-token/extension client grant-type-urn [parameters (hash)])
+  (log-oauth2-info "grant-token/extension, service ~a, grant type ~a"
+                   (client-service-name client)
+                   grant-type-urn)
+  (define parsed-urn (string->url grant-type-urn))
+  (unless (and (equal? (url-scheme parsed-urn) "urn") (equal? (length (url-path parsed-urn)) 1))
+    (error "invalid extension URN " grant-type-urn))
+  (fetch-token-common
+   client
+   (append (list (cons 'grant_type grant-type-urn)
+           (hash-map parameters (λ (k v) (cons k v)))))))
 
 (define (refresh-token client token)
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
