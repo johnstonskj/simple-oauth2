@@ -13,16 +13,22 @@
 
 (define deps
   '("base"
-    "web-server-lib"
+    ;; add-on libraries
     "crypto-lib"
-    "net-jwt"
     "dali"
+    "net-jwt"
+    "threading"
+    "web-server-lib"
+    ;; testing
     "rackunit-lib"
-    "racket-index"))
+    "rackunit-spec"))
 (define build-deps
-  '("scribble-lib"
+  '(;; documentation
+    "scribble-lib"
     "racket-doc"
+    "racket-index"
     "sandbox-lib"
+    ;; coverage (Travis)
     "cover-coveralls"))
 
 (define scribblings

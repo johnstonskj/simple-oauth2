@@ -13,7 +13,6 @@
 ;; * OAuth 2.0 Token Introspection <https://tools.ietf.org/html/rfc7662>
 
 (provide create-random-state
-         create-pkce-challenge
          
          request-authorization-code
          authorization-complete
@@ -48,6 +47,7 @@
          net/url
          net/url-string
          oauth2
+         oauth2/client/pkce
          oauth2/private/http
          oauth2/private/logging
          oauth2/private/privacy)
@@ -58,30 +58,12 @@
    record-auth-request
    shutdown-redirect-server)])
 
-;; ---------- Internal types
-
-(define-struct pkce
-  (verifier
-   code
-   method))
-
 ;; ---------- Implementation
 
 (define (create-random-state [bytes 16])
   (unless (and (exact-nonnegative-integer? bytes) (> bytes 8) (< bytes 128))
     (error 'create-random-state "not a valid value for number of bytes: " bytes))
   (bytes->hex-string (crypto-random-bytes bytes)))
-
-(define (create-pkce-challenge [a-verifier #f])
-  (define verifier
-    (cond
-      [(false? a-verifier)
-       (crypto-random-bytes 48)]
-      [(bytes? a-verifier) a-verifier]
-      [else (error "code verifier must be bytes? or #f")]))
-  (define challenge (base64-url-encode (sha256-bytes verifier)))
-  ; only support 'S256' option, no need for 'plain'
-  (make-pkce verifier challenge "S256"))
 
 (define (request-authorization-code
          client scopes #:state [state #f] #:challenge [challenge #f] #:audience [audience #f])
@@ -97,7 +79,7 @@
                             `((audience . ,audience)))
                         (if (false? challenge)
                             '()
-                            `((code_challenge . ,(pkce-code challenge))
+                            `((code_challenge . ,(pkce-challenge challenge))
                               (code_challenge_method . ,(pkce-method challenge))))))
   (define query-string (alist->form-urlencoded query))
   (define full-url

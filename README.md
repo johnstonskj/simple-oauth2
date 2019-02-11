@@ -26,7 +26,8 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 
 * `oauth2` - common data structures.
 * `oauth2/client` - client API representing all request types.
-* `oauth2/client/flow` - client API the provides higher-level grant flows.
+* `oauth2/client/flow` - client API that provides higher-level grant flows.
+* `oauth2/client/pkce` - client option to support PKCE challenges (RFC7636).
 * `oauth2/storage/config` - a storage API for persisting configuration.
 * `oauth2/storage/clients` - a storage API for persisting client details.
 * `oauth2/storage/tokens` - a storage API for persisting authorization tokens.
@@ -51,6 +52,7 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 ## Tools
 
 * `fitbit` - allows retrieval of sleep and weight records.
+* `livongo` - allows retrieval of blood glucose meter readings.
 
 ## Installation
 

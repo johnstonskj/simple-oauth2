@@ -246,32 +246,6 @@ Create a random string that can be used as the @racket[state] parameter in autho
 The random bytes are formatted as a byte string and safe for URL encoding.
 }
 
-@defproc[(create-pkce-challenge
-          [a-verifier bytes? #f])
-         pkce?]{
-Create a structure that represents the components of a @italic{Proof Key for Code Exchange (PKCE)}
-challenge. The @racket[a-verifier] value can be used as the seed string, if not specified a random
-byte string is generated.
-
-The following is the specified challenge construction approach from 
-  @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.1"]{Proof Key for Code Exchange (PKCE)
-  by OAuth Public Clients}, §4.1.
-
-@verbatim|{
-code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
-code-verifier  = 43*128unreserved
-unreserved     = ALPHA / DIGIT / "-" / "." / "_" / "~"
-ALPHA          = %x41-5A / %x61-7A
-DIGIT          = %x30-39}|
-}
-
-@defproc[#:kind "predicate" (pkce?
-          [v any/c])
-         boolean?]{
-Returns @racket[#t] if the value @racket[v] is a PKCE structure (created by
-  @racket[create-pkce-challenge]).
-}
-
 @;{============================================================================}
 @section[]{Module oauth2/client/flow.}
 @defmodule[oauth2/client/flow]
@@ -299,6 +273,44 @@ TBD
   @item{@racket[audience] - (optional) a non-standard value used by some services
   to denote the API set to which access is requested. if @racket[#f]
   this parameter @italic{will not} be sent.}]
-
-
 }
+
+@;{============================================================================}
+@section[]{Module oauth2/client/pkce.}
+@defmodule[oauth2/client/pkce]
+
+This module simply provides the constructor for challenge values as specified in 
+@hyperlink["https://tools.ietf.org/html/rfc7636"]{RFC7636 - Proof Key for Code
+Exchange (PKCE) by OAuth Public Clients}. PKCE structures may be used in the
+@racket[request-authorization-code] and @racket[grant-token/from-authorization-code]
+procedures.
+
+@defstruct[pkce ([verifier bytes?]
+                 [challenge string?]
+                 [method (or/c "plain" "S256")]) #:omit-constructor ]{
+Values of @racket[pkce?] are constructed only by @racket[create-challenge] (there is
+no @tt{make-pkce} procedure) and represent the PKCE challenge details.
+}
+
+@defproc[(create-challenge
+          [a-verifier bytes? #f])
+         pkce?]{
+Create a structure that represents the components of a PKCE
+challenge. The @racket[a-verifier] value can be used as the seed string, if not specified a random
+byte string is generated.
+
+The following is the specified challenge construction approach from 
+@hyperlink["https://tools.ietf.org/html/rfc7636#section-4.1"]{RFC7636}, §4.1.
+
+@verbatim|{
+code_challenge = BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
+code-verifier  = 43*128unreserved
+unreserved     = ALPHA / DIGIT / "-" / "." / "_" / "~"
+ALPHA          = %x41-5A / %x61-7A
+DIGIT          = %x30-39}|
+}
+
+@defproc[(verifier-char? [ch any?]) boolean?]{
+Implements the @tt{unreserved} rule from the construction rules above.
+}
+
