@@ -151,34 +151,31 @@
                  (cons 'client_id (client-id client))
                  (cons 'client_secret (client-secret client))))))
 
-(define (revoke-token client token revoke-type)
+(define (revoke-token client token token-type-hint)
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
   (fetch-token-common
    client
-   (append (list (cons 'token_type revoke-type)
+   (append (list (cons 'token_type_hint (string-replace (symbol->string token-type-hint)))
                  (cons 'token
                        (cond
-                         [(equal? revoke-type 'access-token)
+                         [(equal? token-type-hint 'access-token)
                           (token-access-token token)]
-                         [(equal? revoke-type 'refresh-token)
+                         [(equal? token-type-hint 'refresh-token)
                           (token-refresh-token token)]
-                         [else (error "unknown token type: " revoke-type)]))))))
+                         [else (error "unknown token type: " token-type-hint)]))))))
 
-(define (introspect-token client token token-type)
-  ;; Note:
-  ;; The Authorization header must be set to Bearer followed by a space,
-  ;; and then a valid access token used for making the Introspect request.
+(define (introspect-token client token token-type-hint)
   (log-oauth2-info "introspect-token, service ~a" (client-service-name client))
   (fetch-token-common
    client
-   (append (list (cons 'token_type_hint token-type)
+   (append (list (cons 'token_type_hint (string-replace (symbol->string token-type-hint)))
                  (cons 'token
                        (cond
-                         [(equal? token-type 'access-token)
+                         [(equal? token-type-hint 'access-token)
                           (token-access-token token)]
-                         [(equal? token-type 'refresh-token)
+                         [(equal? token-type-hint 'refresh-token)
                           (token-refresh-token token)]
-                         [else (error "unknown token type: " token-type)]))))))
+                         [else (error "unknown token type: " token-type-hint)]))))))
 
 (define (make-authorization-header token)
   (string->bytes/utf-8 (format "~a: ~a ~a"
@@ -208,7 +205,8 @@
   (define headers
     (if (false? (client-secret client))
         '()
-        (list (format "~a: Basic ~a" (header-name 'authorization) (string-trim (bytes->string/latin-1 (encode-client client)))))))
+        ;; RFC6749 §2.3
+        (list (make-auth-header (string-trim (bytes->string/latin-1 (encode-client client)))))))
   (define response
     (do-post/form-encoded-list/json
      (string->url (client-token-uri client))

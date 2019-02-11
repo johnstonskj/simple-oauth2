@@ -35,7 +35,7 @@
   '(("scribblings/simple-oauth2.scrbl" (multi-page))))
 
 (define test-omit-paths
-  '("scribblings" "private"))
+  '("scribblings"))
 
 (define racket-launcher-names
   '("fitbit" "livongo"))

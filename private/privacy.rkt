@@ -54,4 +54,25 @@
    (string->bytes/latin-1
     (format "~a:~a"
             (form-urlencoded-encode (client-id client))
-            (form-urlencoded-encode (client-secret client))))))
+            (form-urlencoded-encode (client-secret client))))
+   ""))
+
+;; ---------- Internal tests
+
+
+(module+ test
+  (require rackunit)
+
+  ;; encrypt -> decrypt
+  (define plain-text "my-secret-string")
+  (define cipher-text (encrypt-secret plain-text))
+  (check-equal? (decrypt-secret cipher-text) plain-text)
+  (check-equal? (decrypt-secret (encrypt-secret plain-text)) plain-text)
+  (check-equal? (encrypt-secret (decrypt-secret cipher-text)) cipher-text)
+  
+  ;; encode-client
+  (check-equal?
+   (encode-client (make-client "Face Service" "johnstonskj" "my-secret-string"
+                               "https://example.com/auth" "https://example.com/token"))
+   #"am9obnN0b25za2o6bXktc2VjcmV0LXN0cmluZw==")
+  )

@@ -5,6 +5,7 @@
           scribble/eval
           (for-label racket/base
                      racket/contract
+                     json
                      oauth2
                      oauth2/client
                      oauth2/client/flow))
@@ -69,7 +70,9 @@ service to authenticate the request. Upon success the users browser is
 redirected to a page hosted by this package (the @italic{redirect server}).
 To address this, the response from this procedure is a @racket[channel] which
 will be to communicate back to the caller the authorization code provided by
-the service via the redirect server.
+the service via the redirect server. See
+@hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1"]{The OAuth 2.0
+Authorization Framework}, §4.1
 
 @itemlist[
   @item{@racket[client] - the client configuration for the service performing
@@ -78,7 +81,8 @@ the service via the redirect server.
   @item{@racket[state] - (optional) a state value, returned to the redirect
   server for request/response correlation.}
   @item{@racket[challenge] - (optional) a PKCE challenge structure, if @racket[#f]
-  PKCE @italic{will not} be used.}
+  PKCE @italic{will not} be used. See @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.3"]{Proof
+  Key for Code Exchange (PKCE) by OAuth Public Clients}, §4.3.}
   @item{@racket[audience] - (optional) a non-standard value used by some services
   to denote the API set to which access is requested. if @racket[#f]
   this parameter @italic{will not} be sent.}]
@@ -87,10 +91,6 @@ The value read from the response channel will either be a @racket[string?] code 
 an exception (@racket[exn:fail:http] or @racket[exn:fail:oauth2]). The authorization
 code read from the response channel may then be used in a call to
 @racket[grant-token/from-authorization-code] to retieve a token for this client.
-
-See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1"]{The OAuth 2.0 Authorization
-  Framework}, §4.1 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.3"]{Proof
-  Key for Code Exchange (PKCE) by OAuth Public Clients}, §4.3.
 }
 
 @defproc[(authorization-complete)
@@ -110,19 +110,25 @@ of the redirect server.
           [authorization-code string?]
           [#:challenge challenge #f])
          token?]{
-Request the service grant an access token (and usually a refresh token also) given an
-authorization code previously provided by @racket[request-authorization-code]. 
+Request the authorization server grant an access token (and usually a refresh token also) given an
+authorization code previously provided by @racket[request-authorization-code].
+
+From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1.3"]{The OAuth 2.0 Authorization
+  Framework}, §4.1.3: @emph{The authorization code grant type is used to obtain both access
+   tokens and refresh tokens and is optimized for confidential clients.
+   Since this is a redirection-based flow, the client must be capable of
+   interacting with the resource owner's user-agent (typically a web
+   browser) and capable of receiving incoming requests (via redirection)
+   from the authorization server.}
 
 @itemlist[
   @item{@racket[client] - the client configuration for the service granting
   the token(s).}
   @item{@racket[authorization-code] - a valid authorization code.}
   @item{@racket[challenge] - (optional) a PKCE challenge structure, if @racket[#f]
-  PKCE @italic{will not} be used.}]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1.3"]{The OAuth 2.0 Authorization
-  Framework}, §4.1.3 and @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.5"]{Proof
-  Key for Code Exchange (PKCE) by OAuth Public Clients}, §4.5.
+  PKCE @italic{will not} be used. See
+   @hyperlink["https://tools.ietf.org/html/rfc7636#section-4.5"]{Proof
+   Key for Code Exchange (PKCE) by OAuth Public Clients}, §4.5.}]
 }
 
 @defproc[(grant-token/implicit
@@ -131,16 +137,26 @@ See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1.3"]{The OAuth 2.
           [#:state state #f]
           [#:audience audience #f])
          token?]{
-TBD
+From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.2.1"]{The
+OAuth 2.0 Authorization Framework}, §4.2.1:
+@emph{The implicit grant type is used to obtain access tokens (it does not
+   support the issuance of refresh tokens) and is optimized for public
+   clients known to operate a particular redirection URI. ... 
+
+Unlike the authorization code grant type, in which the client makes
+   separate requests for authorization and for an access token, the
+   client receives the access token as the result of the authorization
+   request.}
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[scopes] - }
-  @item{@racket[state] - }
-  @item{@racket[audience] - }]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.2.1"]{The OAuth 2.0 Authorization
-  Framework}, §4.2.1.
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[scopes] - a set of scopes to which we are requesting access.}
+  @item{@racket[state] - (optional) a state value, returned to the redirect
+  server for request/response correlation.}
+  @item{@racket[audience] - (optional) a non-standard value used by some services
+  to denote the API set to which access is requested. if @racket[#f]
+  this parameter @italic{will not} be sent.}]
 }
 
 @defproc[(grant-token/from-owner-credentials
@@ -148,73 +164,122 @@ See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.2.1"]{The OAuth 2.
           [username string?]
           [password string?])
          token?]{
-TBD
+From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.3.2"]{The OAuth 2.0 Authorization
+  Framework}, §4.3.2:
+@emph{The resource owner password credentials grant type is suitable in
+   cases where the resource owner has a trust relationship with the
+   client, such as the device operating system or a highly privileged
+   application. ...
+
+This grant type is suitable for clients capable of obtaining the
+   resource owner's credentials (username and password, typically using
+   an interactive form).  It is also used to migrate existing clients
+   using direct authentication schemes such as HTTP Basic or Digest
+   authentication to OAuth by converting the stored credentials to an
+   access token.}
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[username] - }
-  @item{@racket[password] - }]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.3.2"]{The OAuth 2.0 Authorization
-  Framework}, §4.3.2.
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[username] - the name of the resource owner being authorized.}
+  @item{@racket[password] - the password for the resource owner being authorized.}]
 }
 
 @defproc[(grant-token/from-client-credentials
           [client client?])
          token?]{
-TBD
+From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.4.2"]{The OAuth 2.0 Authorization
+  Framework}, §4.4.2:
+@emph{The client can request an access token using only its client
+   credentials (or other supported means of authentication) when the
+   client is requesting access to the protected resources under its
+   control, or those of another resource owner that have been previously
+   arranged with the authorization server (the method of which is beyond
+   the scope of this specification).}
 
 @itemlist[
-  @item{@racket[client] - }]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.4.2"]{The OAuth 2.0 Authorization
-  Framework}, §4.4.2.
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}]
 }
 
 @defproc[(refresh-token
           [client client?]
           [token token?])
          token?]{
-TBD
+@emph{Access tokens} are returned to the client along with an expiration duration, thus
+they periodically become unusable when they expire. If the authorization server
+also provided a @emph{refresh token} it may be used to generate a new access token, with
+a new expiration duration.
+
+From @hyperlink["https://tools.ietf.org/html/rfc6749#section-6"]{The OAuth 2.0 Authorization
+  Framework}, §6: @emph{If the authorization server issued a refresh token to the client, the
+  client makes a refresh request to the token endpoint}. Note that the token endpoint is the
+  same used for access grants above.
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[token] - }]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc6749#section-6"]{The OAuth 2.0 Authorization
-  Framework}, §6.
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[token] - the token structure, the @racket[token-refresh-token] value
+   will be used to generate a new @racket[token-access-token] value.}]
 }
 
 @defproc[(revoke-token
           [client client?]
           [token token?]
-          [revoke-type string?])
+          [token-type-hint string? #f])
          void?]{
-TBD
+From @hyperlink["https://tools.ietf.org/html/rfc7009#section-2.1"]{OAuth 2.0 Token Revocation},
+  §2.1:
+@emph{The OAuth 2.0 core specification [RFC6749] defines several ways for a
+   client to obtain refresh and access tokens.  This specification
+   supplements the core specification with a mechanism to revoke both
+   types of tokens.  A token is a string representing an authorization
+   grant issued by the resource owner to the client.  A revocation
+   request will invalidate the actual token and, if applicable, other
+   tokens based on the same authorization grant and the authorization
+   grant itself.}
+   
+@emph{Implementations MUST support the revocation of refresh tokens and
+   SHOULD support the revocation of access tokens}
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[token] - }
-  @item{@racket[revoke-type] - }]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc7009#section-2.1"]{OAuth 2.0 Token Revocation},
-  §2.1.
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[token] - the token to revoke.}
+  @item{@racket[token-type-hint] - (optional) determines the type of token to send to the server.
+   One of @racket['access-token] or @racket['refresh-token].}]
 }
 
 @defproc[(introspect-token
           [client client?]
           [token token?]
-          [token-type symbol?])
-         hash?]{
-TBD
+          [token-type-hint symbol?])
+         jsexpr?]{
+
+From @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Token Introspection},
+  §2.1: @emph{This specification defines a protocol that allows authorized
+   protected resources to query the authorization server to determine
+   the set of metadata for a given token that was presented to them by
+   an OAuth 2.0 client.  This metadata includes whether or not the token
+   is currently active (or if it has expired or otherwise been revoked),
+   what rights of access the token carries (usually conveyed through
+   OAuth 2.0 scopes), and the authorization context in which the token
+   was granted (including who authorized the token and which client it
+   was issued to).  Token introspection allows a protected resource to
+   query this information regardless of whether or not it is carried in
+   the token itself, allowing this method to be used along with or
+   independently of structured token values.  Additionally, a protected
+   resource can use the mechanism described in this specification to
+   introspect the token in a particular authorization decision context
+   and ascertain the relevant metadata about the token to make this
+   authorization decision appropriately.}
 
 @itemlist[
-  @item{@racket[client] - }
-  @item{@racket[token] - }
-  @item{@racket[token-type] - }]
-                   
-See @hyperlink["https://tools.ietf.org/html/rfc7662#section-2.1"]{OAuth 2.0 Token Introspection},
-  §2.1.
+  @item{@racket[client] - the client configuration for the service performing
+  the authorization.}
+  @item{@racket[token] - the token to introspect.}
+  @item{@racket[token-type-hint] - (optional) determines the type of token to send to the server.
+   One of @racket['access-token] or @racket['refresh-token].}]
 }
 
 @subsection{Resource Access}
@@ -235,6 +300,8 @@ response-body)}.
           [token token?])
          bytes?]{
 Create a valid HTTP authorization header, as a byte string, from the provided @racket[token] value.
+See @hyperlink["https://tools.ietf.org/html/rfc7662#section-7.1"]{OAuth 2.0 Token Introspection},
+  §7.1:
 }
 
 @subsection{Parameter Creation}
@@ -296,7 +363,8 @@ no @tt{make-pkce} procedure) and represent the PKCE challenge details.
           [a-verifier bytes? #f])
          pkce?]{
 Create a structure that represents the components of a PKCE
-challenge. The @racket[a-verifier] value can be used as the seed string, if not specified a random
+challenge. The @racket[a-verifier] value (defined as a @emph{high-entropy cryptographic
+random STRING}) can be used as the seed string, if not specified a random
 byte string is generated.
 
 The following is the specified challenge construction approach from 
@@ -308,6 +376,10 @@ code-verifier  = 43*128unreserved
 unreserved     = ALPHA / DIGIT / "-" / "." / "_" / "~"
 ALPHA          = %x41-5A / %x61-7A
 DIGIT          = %x30-39}|
+
+Also, note that while the value @tt{"plain"} is a valid @racket[method] according to the PKCE RFC
+@bold{at this time} it is not used in this implementation, @bold{only} the value
+@tt{"S256"} will be used.
 }
 
 @defproc[(verifier-char? [ch any?]) boolean?]{

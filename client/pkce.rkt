@@ -31,7 +31,9 @@
    [method (or/c "plain" "S256")]))
 
 (define (char-range start end)
-  (for/list ([ch (in-range start (add1 end))])
+  ;; start and end -> (or/c char? natural?)
+  (define (char-idx x) (if (char? x) (char->integer x) x))
+  (for/list ([ch (in-range (char-idx start) (add1 (char-idx end)))])
     (integer->char ch)))
 
 (define verifier-char-set
@@ -41,9 +43,9 @@
   ;;   DIGIT       = %x30-39
   (list->set
    (append
-    (char-range #x41 #x5A)
-    (char-range #x61 #x7A)
-    (char-range #x30 #x39)
+    (char-range #x41 #x5A) ; A...Z
+    (char-range #x61 #x7A) ; a...z
+    (char-range #x30 #x39) ; 0...9
     '(#\- #\. #\_ #\~))))
 
 (define (verifier-char? ch)

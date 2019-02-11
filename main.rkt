@@ -12,8 +12,10 @@
 (provide OAUTH-SPEC-VERSION
          OAUTH-RFC
          OAUTH-DISPLAY-NAME
+         
          (except-out (struct-out client) make-client)
          (rename-out [create-client make-client])
+         
          (struct-out token)
 
          (struct-out exn:fail:http)
@@ -38,11 +40,14 @@
 
 (define OAUTH-RFC 6749)
 
-(define OAUTH-DISPLAY-NAME (format "OAuth ~a (RFC~a)" OAUTH-SPEC-VERSION OAUTH-RFC))
+(define OAUTH-DISPLAY-NAME (format "RFC~a: OAuth ~a (https://tools.ietf.org/html/rfc~a)"
+                                   OAUTH-RFC OAUTH-SPEC-VERSION OAUTH-RFC))
 
-; Note, we use #:prefab to allow these to be serialized using read/write.
+;; Useful to put this into the log nice and early.
+(log-oauth2-info "simple-oauth2 package, implementing ~a." OAUTH-DISPLAY-NAME)
 
 (define-struct client
+  ;; Using #:prefab to allow these to be serialized using read/write.
   (service-name
    authorization-uri
    token-uri

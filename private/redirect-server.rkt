@@ -160,10 +160,10 @@
   (make-media-type 'text 'html (hash 'charset 'utf-8)))
 
 (define response-language
-  (make-header #"Content-Language" "en"))
+  (make-header-string 'content-language "en"))
 
 (define response-no-cache
-  (make-header #"Cache-Control" #"no-cache, no-store, must-revalidate"))
+  (make-header-string 'cache-control "no-cache, no-store, must-revalidate"))
    
 (define (auth-response-servlet req)
   (define params (make-hash (request-bindings req)))

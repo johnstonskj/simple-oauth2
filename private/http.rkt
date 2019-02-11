@@ -19,15 +19,20 @@
     [(set-member? (set 'get 'head 'put 'post 'delete 'options) sym)
      (string-upcase (symbol->string sym))]
     [else #f]))
-  
+
+(define (header-name/x sym)
+  (string-append "X-" (header-name sym)))
+
 (define (header-name sym)
   (cond
-    [(set-member? (set 'authorization 'content-language 'content-type) sym)
+    [(symbol? sym)
      (string-titlecase (symbol->string sym))]
     [else #f]))
 
 (define (make-header-parameter sym value)
-  (format "; ~a=~a" sym value))
+  (if (symbol? sym)
+      (format "; ~a=~a" sym value)
+      #f))
 
 (define (make-header-parameters parameter-hash)
   (string-join
@@ -40,6 +45,14 @@
           value
           (make-header-parameters parameters)))
 
+(define (make-auth-header secret [type 'basic] [parameters (hash)])
+  (format "~a: ~a ~a~a"
+          (header-name 'authorization)
+          (string-titlecase (symbol->string type))
+          secret
+          (make-header-parameters parameters)))
+  
+  
 (define (make-media-type major minor [parameters (hash)])
   (format "~a/~a~a"
           major
@@ -75,3 +88,48 @@
 
 (define (error-message/bytes sym)
   (string->bytes/latin-1 (error-message sym)))
+
+;; ---------- Internal tests
+
+(module+ test
+  (require rackunit)
+
+  ;; error-code
+  (check-equal? (error-code 'ok) 200)
+  (check-false (error-code 'conflict))
+
+  ;; error-message
+  (check-equal? (error-message 'ok) "OK")
+  (check-false (error-message 'conflict))
+  (check-true (bytes? (error-message/bytes 'ok)))
+
+  ;; method-name
+  (check-equal? (method-name 'get) "GET")
+  (check-false (method-name 'patch))
+
+  ;; header-name
+  (check-equal? (header-name 'content-type) "Content-Type")
+  (check-equal? (header-name 'x-my-header) "X-My-Header")
+  (check-equal? (header-name/x 'my-header) "X-My-Header")
+  (check-false (header-name "Date"))
+
+  ;; make-header-parameter
+  (check-equal? (make-header-parameter 'max 200) "; max=200")
+
+  ;; make-header-parameters
+  ; TBD
+
+  ;; make-header-string
+  (check-equal? (make-header-string 'content-type "text/plain") "Content-Type: text/plain")
+
+  ;; make-auth-header
+  (check-equal? (make-auth-header "secret-string") "Authorization: Basic secret-string")
+
+  ;; make-media-type
+  (check-equal? (make-media-type 'text 'plain) "text/plain")
+  (check-equal? (make-media-type 'text 'plain (hash 'lang "en-US")) "text/plain; lang=en-US")
+
+  ;; media-type
+  (check-equal? (media-type 'plain) "text/plain")
+  (check-equal? (media-type 'json) "application/json"))
+

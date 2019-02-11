@@ -28,5 +28,5 @@
 (module+ test
   (require rackunit)
   ;; only use for internal tests, use check- functions 
-  (check-true #f "dummy first test"))
+  )
 
