@@ -58,6 +58,10 @@
 
 (define (create-client service-name id secret authorization-uri token-uri
                        #:revoke [revoke-uri #f] #:introspect [introspect-uri #f])
+  (unless (non-empty-string? service-name)
+    (error "service name must be a non-empty string"))
+  (unless (non-empty-string? id)
+    (error "client id must be a non-empty string"))
   (unless (validate-url authorization-uri)
     (error "authorization URL is invalid: " authorization-uri))
   (unless (validate-url token-uri)
@@ -122,10 +126,25 @@
 
 (module+ test
   (require rackunit)
-  (check-true (validate-url "http://google.com"))
+
+  (define valid-url "http://google.com")
+  (define not-valid-url "this is not a url, honestly")
+  
+  ;; create-client
+  (check-true (client? (create-client "service name" "id" "secret" valid-url valid-url)))
+  (check-exn exn:fail? (λ () (create-client "" "id" "secret" valid-url valid-url)))
+  (check-exn exn:fail? (λ () (create-client "service name" "" "secret" valid-url valid-url)))
+  (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" not-valid-url valid-url)))
+  (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" valid-url not-valid-url)))
+  (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" valid-url valid-url #:revoke not-valid-url)))
+  (check-exn exn:fail? (λ () (create-client "service name" "id" "secret" valid-url valid-url #:introspect not-valid-url)))
+    
+  ;; validate-url
+  (check-true (validate-url valid-url))
   (check-true (validate-url "http://google.com/q"))
   (check-true (validate-url "http://google.com/q"))
   (check-false (validate-url "ftp://google.com/q"))
+  (check-false (validate-url not-valid-url))
   (check-false (validate-url "file:///q"))
   (check-false (validate-url "/path"))
   (check-false (validate-url "?query")))
