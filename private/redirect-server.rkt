@@ -14,6 +14,7 @@
 (require racket/bool
          racket/match
          racket/os
+         racket/string
          web-server/servlet
          web-server/servlet-env
          dali
@@ -163,7 +164,7 @@
   (make-header-string 'content-language "en"))
 
 (define response-no-cache
-  (make-header-string 'cache-control "no-cache, no-store, must-revalidate"))
+  (make-header-string 'cache-control (make-header-options '(no-cache no-store must-revalidate))))
    
 (define (auth-response-servlet req)
   (define params (make-hash (request-bindings req)))

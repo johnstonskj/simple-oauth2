@@ -35,9 +35,12 @@
       #f))
 
 (define (make-header-parameters parameter-hash)
-  (string-join
-   (hash-map parameter-hash (λ (k v) (make-header-parameter k v)))
-   ""))
+  (apply
+   string-append
+   (hash-map parameter-hash (λ (k v) (make-header-parameter k v)))))
+
+(define (make-header-options lst)
+  (string-join (map symbol->string lst) ", "))
 
 (define (make-header-string sym value [parameters (hash)])
   (format "~a: ~a~a"
@@ -51,8 +54,7 @@
           (string-titlecase (symbol->string type))
           secret
           (make-header-parameters parameters)))
-  
-  
+
 (define (make-media-type major minor [parameters (hash)])
   (format "~a/~a~a"
           major
@@ -117,8 +119,12 @@
   (check-equal? (make-header-parameter 'max 200) "; max=200")
 
   ;; make-header-parameters
-  ; TBD
+  (check-equal? (make-header-parameters (hash 'max 200)) "; max=200")
+  (check-equal? (make-header-parameters (hash 'min 100 'max 200)) "; min=100; max=200")
 
+  ;; make-header-options
+  (check-equal? (make-header-options '(one two three)) "one, two, three")
+  
   ;; make-header-string
   (check-equal? (make-header-string 'content-type "text/plain") "Content-Type: text/plain")
 
@@ -131,5 +137,6 @@
 
   ;; media-type
   (check-equal? (media-type 'plain) "text/plain")
-  (check-equal? (media-type 'json) "application/json"))
+  (check-equal? (media-type 'json) "application/json")
+  (check-false (media-type 'invalid-thing)))
 
