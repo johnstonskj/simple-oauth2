@@ -130,19 +130,20 @@
                    (client-service-name client) username)
   (fetch-token-common
    client
-   (append (list (cons 'grant_type "password")
-                 (cons 'username username)
-                 (cons 'password password)
-                 (cons 'client_id (client-id client))))))
+   (append `((grant_type . "password")
+             (username . ,username)
+             (password . ,password)
+             (client_id . ,(client-id client))))))
 
 (define (grant-token/from-client-credentials client)
-  (log-oauth2-info "grant-token/from-client-credentials, service ~a"
-                   (client-service-name client))
+  (log-oauth2-info "grant-token/from-client-credentials, service ~a, client ~a"
+                   (client-service-name client)
+                   (client-id client))
   (fetch-token-common
    client
-   (append (list (cons 'grant_type "password")
-                 (cons 'client_id (client-id client))
-                 (cons 'client_secret (client-secret client))))))
+   (append `((grant_type . "password")
+             (client_id . ,(client-id client))
+             (client_secret . ,(client-secret client))))))
 
 (define (grant-token/extension client grant-type-urn [parameters (hash)])
   (log-oauth2-info "grant-token/extension, service ~a, grant type ~a"
@@ -153,43 +154,31 @@
     (error "invalid extension URN " grant-type-urn))
   (fetch-token-common
    client
-   (append (list (cons 'grant_type grant-type-urn)
+   (append '((grant_type . ,grant-type-urn)
            (hash-map parameters (λ (k v) (cons k v)))))))
 
 (define (refresh-token client token)
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
   (fetch-token-common
    client
-   (append (list (cons 'grant_type "refresh_token")
-                 (cons 'refresh_token (token-refresh-token token))
-                 (cons 'client_id (client-id client))
-                 (cons 'client_secret (client-secret client))))))
+   (append `((grant_type . "refresh_token")
+             (refresh_token . ,(token-refresh-token token))
+             (client_id . ,(client-id client))
+             (client_secret . ,(client-secret client))))))
 
 (define (revoke-token client token token-type-hint)
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
   (fetch-token-common
    client
-   (append (list (cons 'token_type_hint (string-replace (symbol->string token-type-hint)))
-                 (cons 'token
-                       (cond
-                         [(equal? token-type-hint 'access-token)
-                          (token-access-token token)]
-                         [(equal? token-type-hint 'refresh-token)
-                          (token-refresh-token token)]
-                         [else (error "unknown token type: " token-type-hint)]))))))
+   (append `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
+             (token . ,(get-token token token-type-hint))))))
 
 (define (introspect-token client token token-type-hint)
   (log-oauth2-info "introspect-token, service ~a" (client-service-name client))
   (fetch-token-common
    client
-   (append (list (cons 'token_type_hint (string-replace (symbol->string token-type-hint)))
-                 (cons 'token
-                       (cond
-                         [(equal? token-type-hint 'access-token)
-                          (token-access-token token)]
-                         [(equal? token-type-hint 'refresh-token)
-                          (token-refresh-token token)]
-                         [else (error "unknown token type: " token-type-hint)]))))))
+   (append `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
+             (token . ,(get-token token token-type-hint))))))
 
 (define (make-authorization-header token)
   (string->bytes/utf-8 (format "~a: ~a ~a"
@@ -214,6 +203,12 @@
 ;; ---------- Internal Implementation
 
 (define empty-string "")
+
+(define (get-token token type)
+  (cond
+    [(equal? type 'access-token)  (token-access-token token)]
+    [(equal? type 'refresh-token) (token-refresh-token token)]
+    [else (error "unknown token type: " type)]))
 
 (define (fetch-token-common client data-list)
   (define headers
