@@ -69,6 +69,8 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 
 ## History
 
+* **1.2** - Client Additions; factored out PKCE module, simplified client module, added `grant-token/extension` API procedure.
+* **1.1** - Client Tools; implemented second client tool (for Livongo blood glucose monitor). Better client response formatting.
 * **1.0** - Stable Client; the client interface for code grant and token refresh is now complete. Fitbot tool working for sleep and weight scopes.
 * **0.1** - Initial Version; the client interface is reasonably stable, but only the authorization API has been tested.
 
