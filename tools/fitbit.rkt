@@ -45,6 +45,9 @@
 
   (define maybe-client (get-client FITBIT-SERVICE-NAME))
 
+  (register-error-transformer (client-authorization-uri maybe-client) fitbit-error-handler)
+  (register-error-transformer (client-token-uri maybe-client) fitbit-error-handler)
+  
   (define thunk
     (cond
       [(or (false? maybe-client)
@@ -65,6 +68,17 @@
     (logging-level)))
 
 ;; ---------- Internal procedures
+
+(define (fitbit-error-handler uri json-body cm)
+  (cond
+    [(hash-has-key? json-body 'errors)
+     (define json-error (first (hash-ref json-body 'errors '())))
+     (make-exn:fail:oauth2 (hash-ref json-error 'errorType 'unknown)
+                           (hash-ref json-error 'message "")
+                           uri
+                           ""
+                           cm)]
+    [else #f]))
 
 (define (parse-sleep json)
   (parse-rows json

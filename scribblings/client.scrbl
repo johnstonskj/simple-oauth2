@@ -343,6 +343,40 @@ Create a random string that can be used as the @racket[state] parameter in autho
 The random bytes are formatted as a byte string and safe for URL encoding.
 }
 
+@subsection{Response Error Handling}
+
+@defproc[(register-error-transformer
+          [url string?]
+          [func (-> string? jsexpr? continuation-mark-set? (or/c exn:fail:oauth2 #f))])
+         void?]{
+Specifically for services that do not follow the standard error response format in
+@hyperlink["https://tools.ietf.org/html/rfc6749#section-4.1.2.1"]{The OAuth 2.0 Authorization
+Framework}, §4.1.2.1 (or other sections titled Error Response). A client may register an
+error transformer that will be passed any non-standard JSON error responses from calls to
+the registered URL, to transform into an @racket[exn:fail:oauth2] exception.
+            
+@racketblock[
+(define (fitbit-error-handler uri json-body cm)
+  (cond
+    [(hash-has-key? json-body 'errors)
+     (define json-error (first (hash-ref json-body 'errors '())))
+     (make-exn:fail:oauth2 (hash-ref json-error 'errorType 'unknown)
+                           (hash-ref json-error 'message "")
+                           uri
+                           "" ; unknown state
+                           cm)]
+    [else #f]))
+
+(register-error-transformer
+ (client-authorization-uri fitbit-client)
+ fitbit-error-handler)
+]
+}
+
+@defproc[(deregister-error-transformer[url string?]) void?]{
+This procedure removes any error transformer associated with @racket[url].
+}
+
 @;{============================================================================}
 @section[]{Module oauth2/client/flow.}
 @defmodule[oauth2/client/flow]

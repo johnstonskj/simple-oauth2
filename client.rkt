@@ -26,6 +26,9 @@
          refresh-token
          revoke-token
          introspect-token
+
+         register-error-transformer
+         deregister-error-transformer
          
          make-authorization-header
          resource-sendrecv)
@@ -60,7 +63,15 @@
    record-auth-request
    shutdown-redirect-server)])
 
-;; ---------- Implementation
+;; ---------- Implementation - Grants
+
+(define error-transformers (make-hash))
+
+(define (register-error-transformer url func)
+  (hash-set! error-transformers url func))
+
+(define (deregister-error-transformer url)
+  (hash-remove! error-transformers url))
 
 (define (create-random-state [bytes 16])
   (unless (and (exact-nonnegative-integer? bytes) (> bytes 8) (< bytes 128))
@@ -112,7 +123,7 @@
 (define (grant-token/from-authorization-code client authorization-code #:challenge [challenge #f])
   (log-oauth2-info "grant-token/from-authorization-code, service ~a, code ~a"
                    (client-service-name client) authorization-code)
-  (fetch-token-common
+  (token-request-common
    client
    (append `((grant_type . "authorization_code")
              (code . ,authorization-code)
@@ -128,7 +139,7 @@
 (define (grant-token/from-owner-credentials client username password)
   (log-oauth2-info "grant-token/from-owner-credentials, service ~a, username ~a"
                    (client-service-name client) username)
-  (fetch-token-common
+  (token-request-common
    client
    (append `((grant_type . "password")
              (username . ,username)
@@ -139,7 +150,7 @@
   (log-oauth2-info "grant-token/from-client-credentials, service ~a, client ~a"
                    (client-service-name client)
                    (client-id client))
-  (fetch-token-common
+  (token-request-common
    client
    (append `((grant_type . "password")
              (client_id . ,(client-id client))
@@ -152,14 +163,16 @@
   (define parsed-urn (string->url grant-type-urn))
   (unless (and (equal? (url-scheme parsed-urn) "urn") (equal? (length (url-path parsed-urn)) 1))
     (error "invalid extension URN " grant-type-urn))
-  (fetch-token-common
+  (token-request-common
    client
    (append '((grant_type . ,grant-type-urn)
            (hash-map parameters (λ (k v) (cons k v)))))))
 
+;; ---------- Implementation - Token Management
+
 (define (refresh-token client token)
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
-  (fetch-token-common
+  (token-request-common
    client
    (append `((grant_type . "refresh_token")
              (refresh_token . ,(token-refresh-token token))
@@ -168,17 +181,19 @@
 
 (define (revoke-token client token token-type-hint)
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
-  (fetch-token-common
+  (token-request-common
    client
    (append `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
              (token . ,(get-token token token-type-hint))))))
 
 (define (introspect-token client token token-type-hint)
   (log-oauth2-info "introspect-token, service ~a" (client-service-name client))
-  (fetch-token-common
+  (token-request-common
    client
    (append `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
              (token . ,(get-token token token-type-hint))))))
+
+;; ---------- Implementation - Resource Access
 
 (define (make-authorization-header token)
   (string->bytes/utf-8 (format "~a: ~a ~a"
@@ -210,7 +225,7 @@
     [(equal? type 'refresh-token) (token-refresh-token token)]
     [else (error "unknown token type: " type)]))
 
-(define (fetch-token-common client data-list)
+(define (token-request-common client data-list)
   (define headers
     (if (false? (client-secret client))
         '()
@@ -262,7 +277,7 @@
      #:headers (cons (format "~a: ~a" (header-name 'content-type) data-type) request-headers)
      #:data data))
   (log-oauth2-debug "(values ~s ~s #port)" status response-headers)
-  (parse-response/with-errors status response-headers in-port))
+  (parse-response/with-errors uri status response-headers in-port))
 
 (define (string-split-first str sep)
   (define index
@@ -272,7 +287,7 @@
       (values str empty-string)
       (values (substring str 0 index) (string-trim (substring str index)))))
 
-(define (parse-response/with-errors status headers in-port)
+(define (parse-response/with-errors uri status headers in-port)
   (define response (parse-response status headers in-port))
   (when (<= (error-code 'bad-request) (first response) (error-code 'last-error))
     (log-oauth2-error "error response, code ~a, body ~a" (first response) (fourth response))
@@ -287,20 +302,19 @@
                                        (hash-ref json-body 'error_uri empty-string)
                                        (hash-ref json-body 'state empty-string)
                                        (current-continuation-marks)))]
-         [(hash-has-key? json-body 'errors)
-          ;; Note, this is a Fitbit specific deviation from the standard!
-          (define json-error (first (hash-ref json-body 'errors '())))
-          (raise (make-exn:fail:oauth2 (hash-ref json-error 'errorType 'unknown)
-                                       (hash-ref json-error 'message empty-string)
-                                       empty-string
-                                       empty-string
-                                       (current-continuation-marks)))]
-         [else             
-          (raise (make-exn:fail:oauth2 'unknown
-                                       (fourth response)
-                                       empty-string
-                                       empty-string
-                                       (current-continuation-marks)))])]
+         [else
+          (define exn (if (hash-has-key? error-transformers uri)
+                          ((hash-ref error-transformers uri) uri json-body (current-continuation-marks))
+                          #f))
+          (cond
+            [(exn:fail:oauth2? exn)
+             (raise exn)]
+            [else
+             (raise (make-exn:fail:oauth2 'unknown
+                                          (fourth response)
+                                          empty-string
+                                          empty-string
+                                          (current-continuation-marks)))])])]
       [else
        (raise (apply make-exn:fail:http response))]))
   response)
