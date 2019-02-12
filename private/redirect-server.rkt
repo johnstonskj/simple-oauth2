@@ -165,7 +165,12 @@
 
 (define response-no-cache
   (make-header #"Cache-Control" #"no-cache no-store must-revalidate"))
-   
+
+(define (params->context params)
+  (make-hash
+   (hash-map params
+             (λ (k v) (cons (symbol->string k) v)))))
+
 (define (auth-response-servlet req)
   (define params (make-hash (request-bindings req)))
   (cond
@@ -181,7 +186,7 @@
       (current-seconds)
       response-type
       (list response-language response-no-cache)
-      (response-content success-template params))]
+      (response-content success-template (params->context params)))]
     [(hash-has-key? params 'error)
      (log-oauth2-error "received error ~a from auth server, for state ~a"
                        (hash-ref params 'error)
@@ -198,7 +203,7 @@
       (current-seconds)
       response-type
       (list response-language response-no-cache)
-      (response-content failure-template params))]
+      (response-content failure-template (params->context params)))]
     [else
      (log-oauth2-error "received an unknown error from auth server: ~a" params)
      (channel-put request-channel
@@ -213,7 +218,7 @@
       (current-seconds)
       response-type
       (list response-language response-no-cache)
-      (response-content error-template params))]))
+      (response-content error-template (params->context params)))]))
 
 (define-struct server-config
   (host
