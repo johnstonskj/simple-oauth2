@@ -141,10 +141,10 @@
                    (client-service-name client) username)
   (token-request-common
    client
-   (append `((grant_type . "password")
-             (username . ,username)
-             (password . ,password)
-             (client_id . ,(client-id client))))))
+   `((grant_type . "password")
+     (username . ,username)
+     (password . ,password)
+     (client_id . ,(client-id client)))))
 
 (define (grant-token/from-client-credentials client)
   (log-oauth2-info "grant-token/from-client-credentials, service ~a, client ~a"
@@ -152,9 +152,9 @@
                    (client-id client))
   (token-request-common
    client
-   (append `((grant_type . "password")
-             (client_id . ,(client-id client))
-             (client_secret . ,(client-secret client))))))
+   `((grant_type . "password")
+     (client_id . ,(client-id client))
+     (client_secret . ,(client-secret client)))))
 
 (define (grant-token/extension client grant-type-urn [parameters (hash)])
   (log-oauth2-info "grant-token/extension, service ~a, grant type ~a"
@@ -165,8 +165,8 @@
     (error "invalid extension URN " grant-type-urn))
   (token-request-common
    client
-   (append '((grant_type . ,grant-type-urn)
-           (hash-map parameters (λ (k v) (cons k v)))))))
+   '((grant_type . ,grant-type-urn)
+     (hash-map parameters (λ (k v) (cons k v))))))
 
 ;; ---------- Implementation - Token Management
 
@@ -174,24 +174,24 @@
   (log-oauth2-info "refresh-token, service ~a" (client-service-name client))
   (token-request-common
    client
-   (append `((grant_type . "refresh_token")
-             (refresh_token . ,(token-refresh-token token))
-             (client_id . ,(client-id client))
-             (client_secret . ,(client-secret client))))))
+   `((grant_type . "refresh_token")
+     (refresh_token . ,(token-refresh-token token))
+     (client_id . ,(client-id client))
+     (client_secret . ,(client-secret client)))))
 
 (define (revoke-token client token token-type-hint)
   (log-oauth2-info "revoke-token, service ~a" (client-service-name client))
   (token-request-common
    client
-   (append `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
-             (token . ,(get-token token token-type-hint))))))
+   `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
+     (token . ,(get-token token token-type-hint)))))
 
 (define (introspect-token client token token-type-hint)
   (log-oauth2-info "introspect-token, service ~a" (client-service-name client))
   (token-request-common
    client
-   (append `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
-             (token . ,(get-token token token-type-hint))))))
+   `((token_type_hint . ,(string-replace (symbol->string token-type-hint)))
+     (token . ,(get-token token token-type-hint)))))
 
 ;; ---------- Implementation - Resource Access
 

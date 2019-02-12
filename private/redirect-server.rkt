@@ -158,13 +158,13 @@
   (list (string->bytes/utf-8 (get-output-string out))))
 
 (define response-type
-  (make-media-type 'text 'html (hash 'charset 'utf-8)))
+  (string->bytes/latin-1 (make-media-type 'text 'html (hash 'charset 'utf-8))))
 
 (define response-language
-  (make-header-string 'content-language "en"))
+  (make-header #"Content-Language" #"en"))
 
 (define response-no-cache
-  (make-header-string 'cache-control (make-header-options '(no-cache no-store must-revalidate))))
+  (make-header #"Cache-Control" #"no-cache no-store must-revalidate"))
    
 (define (auth-response-servlet req)
   (define params (make-hash (request-bindings req)))

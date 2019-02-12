@@ -45,8 +45,8 @@
 
   (define maybe-client (get-client FITBIT-SERVICE-NAME))
 
-  (register-error-transformer (client-authorization-uri maybe-client) fitbit-error-handler)
-  (register-error-transformer (client-token-uri maybe-client) fitbit-error-handler)
+  (register-error-transformer (client-authorization-uri fitbit-client) fitbit-error-handler)
+  (register-error-transformer (client-token-uri fitbit-client) fitbit-error-handler)
   
   (define thunk
     (cond
