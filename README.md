@@ -64,8 +64,12 @@ Racket already provides two packages with embedded OAuth implementations, 1) *[w
 ## Work in Progress
 
 * Support for [JSON Web Tokens](https://tools.ietf.org/html/rfc7519).
+* Support for [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html).
 * Authorization Server framework.
 * Resource Server framework.
+* Potential tools:
+  * [Ōura Ring](https://cloud.ouraring.com/docs/).
+
 
 ## History
 
