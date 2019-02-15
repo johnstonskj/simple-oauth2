@@ -5,8 +5,8 @@
 ;;
 ;; Copyright (c) 2019 Simon Johnston (johnstonskj@gmail.com).
 
-;; https://openid.net/specs/openid-connect-core-1_0.html
 ;; OpenID Connect Core 1.0 incorporating errata set 1
+;;   https://openid.net/specs/openid-connect-core-1_0.html
 
 (require racket/contract)
 
@@ -20,6 +20,7 @@
 ;; ---------- Internal types
 
 ;; ---------- Implementation
+
 
 ;; ---------- Internal procedures
 
