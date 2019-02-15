@@ -211,7 +211,12 @@ From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.5"]{The OAuth 2.0
   Framework}, §4.5: @emph{The client uses an extension grant type by specifying the grant type
   using an absolute URI (defined by the authorization server) as the
   value of the "grant_type" parameter of the token endpoint, and by
-  adding any additional parameters necessary.}
+  adding any additional parameters necessary.} 
+
+Note that the @racket[grant-type-urn] @bold{should} be a registered IETF value
+according to @hyperlink["https://tools.ietf.org/html/rfc6755"]{An IETF URN Sub-Namespace for OAuth},
+but the only validation the client performs is that it starts with the prefix
+value @racket[oauth-grant-type-urn].
 
 @itemlist[
   @item{@racket[client] - the client configuration for the service performing
@@ -229,6 +234,13 @@ From @hyperlink["https://tools.ietf.org/html/rfc6749#section-4.5"]{The OAuth 2.0
  "urn:ietf:params:oauth:grant_type:saml2-bearer"
  (hash 'assertion "PEFzc2VydGlvbiBJc3N1ZUluc3RhbnQ9Ij...IwMTEtMDU"))
 ]
+}
+
+@deftogether[(
+              @defthing[oauth-namespace-urn string?]
+              @defthing[oauth-grant-type-urn string?])]{
+These values represent the IETF registered URN prefixes for extension values
+used to add methods to OAuth. See @racket[grant-token/extension].
 }
 
 

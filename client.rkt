@@ -31,7 +31,10 @@
          deregister-error-transformer
          
          make-authorization-header
-         resource-sendrecv)
+         resource-sendrecv
+
+         oauth-namespace-urn
+         oauth-grant-type-urn)
 
 ;; ---------- Requirements
 
@@ -62,6 +65,13 @@
   (get-redirect-uri
    record-auth-request
    shutdown-redirect-server)])
+
+;; ---------- Implementation - Extensions
+;; ;; see https://tools.ietf.org/html/rfc6755
+
+(define oauth-namespace-urn "urn:ietf:params:oauth:")
+
+(define oauth-grant-type-urn "urn:ietf:params:oauth:grant-type:")
 
 ;; ---------- Implementation - Grants
 
@@ -160,8 +170,7 @@
   (log-oauth2-info "grant-token/extension, service ~a, grant type ~a"
                    (client-service-name client)
                    grant-type-urn)
-  (define parsed-urn (string->url grant-type-urn))
-  (unless (and (equal? (url-scheme parsed-urn) "urn") (equal? (length (url-path parsed-urn)) 1))
+  (unless (string-prefix? grant-type-urn oauth-grant-type-urn)
     (error "invalid extension URN " grant-type-urn))
   (token-request-common
    client
