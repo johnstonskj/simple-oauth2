@@ -124,7 +124,8 @@
   (shutdown-redirect-server))
 
 (define (grant-token/from-authorization-code client authorization-code #:challenge [challenge #f])
-  (log-oauth2-info "grant-token/from-authorization-code, service ~a, code ~a" (client-service-name client) authorization-code)
+  (log-oauth2-info "grant-token/from-authorization-code, service ~a, code ~a"
+                   (client-service-name client) authorization-code)
   (fetch-token-common
    client
    (append `((grant_type . "authorization_code")
@@ -139,7 +140,8 @@
   #f)
 
 (define (grant-token/from-owner-credentials client username password)
-  (log-oauth2-info "grant-token/from-owner-credentials, service ~a, username ~a" (client-service-name client) username)
+  (log-oauth2-info "grant-token/from-owner-credentials, service ~a, username ~a"
+                   (client-service-name client) username)
   (fetch-token-common
    client
    (append (list (cons 'grant-type "password")
@@ -196,14 +198,19 @@
                          [else (error "unknown token type: " token-type)]))))))
 
 (define (make-authorization-header token)
-  (string->bytes/utf-8 (format "~a: ~a ~a" (header-name 'authorization) (token-type token) (token-access-token token))))
+  (string->bytes/utf-8 (format "~a: ~a ~a"
+                               (header-name 'authorization)
+                               (token-type token)
+                               (token-access-token token))))
 
 ;; ---------- Internal Implementation
 
 (define empty-string "")
 
 (define (fetch-token-common client data-list)
-  (define header (format "~a: Basic ~a" (header-name 'authorization) (string-trim (bytes->string/latin-1 (encode-client client)))))
+  (define header (format "~a: Basic ~a"
+                         (header-name 'authorization)
+                         ((compose1 string-trim bytes->string/latin-1 encode-client) client)))
   (define response
     (do-post/form-encoded-list/json
      (string->url (client-token-uri client))
@@ -237,7 +244,8 @@
   (log-oauth2-debug "  ~s" uri)
   (log-oauth2-debug "  #:port ~s" (url-port uri))
   (log-oauth2-debug "  #:ssl? ~s ; ~s" (equal? (url-scheme uri) "https") (url-scheme uri))
-  (log-oauth2-debug "  #:headers ~s" (cons (format "~a: ~a" (header-name 'content-type) data-type) request-headers))
+  (log-oauth2-debug "  #:headers ~s" (cons (format "~a: ~a" (header-name 'content-type) data-type)
+                                           request-headers))
   (log-oauth2-debug "  #:data ~s)" data)
   (define-values
     (status response-headers in-port)

@@ -15,12 +15,25 @@
 
 ;; ---------- Requirements
 
-(require)
+(require
+  (prefix-in c: oauth2/client))
 
 ;; ---------- Internal types
 
 ;; ---------- Implementation
 
+(define openid-scope-id "openid")
+
+(define (request-authorization-code client
+                                    scopes
+                                    #:state [state #f]
+                                    #:challenge [challenge #f]
+                                    #:audience [audience #f])
+  (c:request-authorization-code client
+                                (cons  openid-scope-id scopes)
+                                #:state state
+                                #:challenge challenge
+                                #:audience audience))
 
 ;; ---------- Internal procedures
 
