@@ -350,4 +350,4 @@
    (hash-ref json 'refresh_token #f)
    (hash-ref json 'audience #f)
    (string-split (hash-ref json 'scope empty-string) ",")
-   (+ (current-seconds) (hash-ref json 'expires_in "0"))))
+   (+ (current-seconds) (string->number (hash-ref json 'expires_in "0")))))
