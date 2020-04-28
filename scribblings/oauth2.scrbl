@@ -48,7 +48,7 @@ A display string formatting the version of OAuth supported by the package.
               @defform*[((log-oauth2-fatal string-expr)
                          (log-oauth2-fatal format-string-expr v ...))])]{
 The logger instance, and logging procedures, used internally by the package. This is
-provided for tools to be ablt to log OAuth specific interactions with the same topic,
+provided for tools to be able to log OAuth specific interactions with the same topic,
 but also to adjust the level of logging performed by the library.
 }
 
