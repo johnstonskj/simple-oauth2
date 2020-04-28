@@ -236,10 +236,13 @@
 
 (define (token-request-common client data-list)
   (define headers
-    (if (false? (client-secret client))
-        '()
-        ;; RFC6749 §2.3
-        (list (make-auth-header (string-trim (bytes->string/latin-1 (encode-client client)))))))
+    (cons
+      (make-header-string 'accept "application/json")
+      (if (false? (client-secret client))
+          '()
+          ;; RFC6749 §2.3
+          (list (make-auth-header (string-trim (bytes->string/latin-1 (encode-client client)))))))
+  )
   (define response
     (do-post/form-encoded-list/json
      (string->url (client-token-uri client))
