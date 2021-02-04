@@ -53,17 +53,23 @@
     [else #f]))
 
 (define (set-token! user-name service-name a-token)
-  (log-oauth2-debug "set-token! for ~a (~a), ~a" 
+  (log-oauth2-debug "set-token! for ~a (~a), ~a ~a"
                     user-name
                     (string? user-name)
-                    service-name)
+                    service-name
+                    (token-refresh-token a-token)
+                    )
   (define key (cons user-name service-name))
   (hash-set! tokens-cache
              key
              (struct-copy token
                           a-token
                           [access-token (encrypt-secret (token-access-token a-token))]
-                          [refresh-token (encrypt-secret (token-refresh-token a-token))])))
+                          [refresh-token
+                            (if (token-refresh-token a-token)
+                                (encrypt-secret (token-refresh-token a-token))
+                                #f)
+                                ])))
 
 ;; ---------- Startup procedures
 
