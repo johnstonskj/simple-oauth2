@@ -350,4 +350,5 @@
    (hash-ref json 'refresh_token #f)
    (hash-ref json 'audience #f)
    (string-split (hash-ref json 'scope empty-string) ",")
-   (+ (current-seconds) (string->number (hash-ref json 'expires_in "0")))))
+   (let ([expires-in (hash-ref json 'expires_in "0")])
+     (+ (current-seconds) (if (string? expires-in) (string->number expires-in) expires-in)))))
