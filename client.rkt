@@ -112,10 +112,10 @@
       (string-append "?" query-string))))
   (parameterize ([current-error-port (open-output-string "stderr")])
     (define cmd (format (match (system-type 'os)
-                          ['windows "cmd /c start \"~a\""]
+                          ['windows "start ~a"]
                           ['macosx "open \"~a\""]
                           ['unix "xdg-open \"~a\""])
-                        full-url))
+                        (if (eq? (system-type 'os) 'windows) (string-replace full-url "&" "^&") full-url)))
     (log-oauth2-debug "starting browser: ~a" cmd)
     (define success? (system cmd))
     (cond
